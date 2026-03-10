@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FrenchMind — 法語學習 App</title>
+
+  <!-- ★ 填入你的 GitHub 帳號和 Repo 名稱 ★ -->
+  <script>
+    const GITHUB_USER = 'Qian0307';   // ← 改這裡
+    const GITHUB_REPO = 'frenchapp';    // ← 改這裡（你的 repo 名稱）
+    const LATEST = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/latest/download`;
+    const RELEASES_PAGE = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/latest`;
+  </script>
+  <meta name="description" content="用間隔重複法學習20,000個法文單字。支援繁體中文，每日文章，文法課程。" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,700;1,400&family=Noto+Sans+TC:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    /* ── Reset & Base ──────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #1A5CFF;
+      --red:    #E8003D;
+      --white:  #FFFFFF;
+      --ink:    #0D1117;
+      --ink60:  rgba(13,17,23,.6);
+      --ink30:  rgba(13,17,23,.12);
+      --bg:     #F7F8FC;
+      --card:   #FFFFFF;
+      --radius: 20px;
+      --shadow: 0 8px 40px rgba(26,92,255,.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    /* ── Utility ───────────────────────────────────────── */
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    .tag {
+      display: inline-block;
+      background: rgba(26,92,255,.1);
+      color: var(--blue);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+    h1,h2,h3 { font-family: 'Spectral', 'Noto Sans TC', serif; line-height: 1.15; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 600; font-size: 1rem;
+      cursor: pointer; border: none; text-decoration: none;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: var(--blue); color: #fff;
+      box-shadow: 0 4px 20px rgba(26,92,255,.35);
+    }
+    .btn-primary:hover { box-shadow: 0 8px 32px rgba(26,92,255,.45); }
+    .btn-outline {
+      background: transparent; color: var(--blue);
+      border: 2px solid var(--blue);
+    }
+    .btn-ghost {
+      background: rgba(255,255,255,.15); color: #fff;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.3);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.25); }
+
+    /* ── Nav ───────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(247,248,252,.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--ink30);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Spectral', serif; font-size: 1.4rem; font-weight: 700;
+      color: var(--ink); text-decoration: none;
+    }
+    .nav-logo .logo-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--blue), #4C8DFF);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.1rem;
+    }
+    .nav-links {
+      display: flex; align-items: center; gap: 32px; list-style: none;
+    }
+    .nav-links a {
+      color: var(--ink60); text-decoration: none; font-size: .95rem;
+      transition: color .15s;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-cta { display: flex; align-items: center; gap: 12px; }
+
+    #google-signin-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: 10px;
+      background: #fff; color: var(--ink); font-weight: 500; font-size: .9rem;
+      border: 1.5px solid var(--ink30); cursor: pointer;
+      transition: box-shadow .15s, border-color .15s;
+    }
+    #google-signin-btn:hover { box-shadow: 0 2px 12px rgba(0,0,0,.1); border-color: #aaa; }
+    #google-signin-btn svg { width: 18px; height: 18px; }
+
+    #user-avatar-area {
+      display: none; align-items: center; gap: 10px;
+      font-size: .9rem; font-weight: 500;
+    }
+    #user-avatar-area img {
+      width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--blue);
+    }
+    #signout-btn {
+      font-size: .8rem; color: var(--ink60); cursor: pointer;
+      background: none; border: none; padding: 4px 8px;
+      border-radius: 6px; transition: background .15s;
+    }
+    #signout-btn:hover { background: var(--ink30); }
+
+    /* ── Hero ──────────────────────────────────────────── */
+    .hero {
+      padding-top: 130px; padding-bottom: 80px;
+      background: linear-gradient(160deg, #0a1628 0%, #1A3575 55%, #0D2158 100%);
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; right: -200px;
+      width: 700px; height: 700px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(26,92,255,.4) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute; bottom: -150px; left: -100px;
+      width: 500px; height: 500px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(232,0,61,.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .tricolor {
+      display: flex; gap: 0; margin-bottom: 28px;
+    }
+    .tricolor span {
+      width: 5px; height: 36px; border-radius: 3px;
+      display: block; margin-right: 4px;
+    }
+    .hero-content { position: relative; z-index: 2; }
+    .hero h1 {
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      color: #fff; max-width: 680px; margin-bottom: 24px;
+    }
+    .hero h1 .accent { color: #60A5FA; }
+    .hero p {
+      font-size: 1.15rem; color: rgba(255,255,255,.75);
+      max-width: 520px; line-height: 1.7; margin-bottom: 40px;
+    }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 60px; }
+    .hero-stats {
+      display: flex; gap: 40px; flex-wrap: wrap;
+    }
+    .hero-stat { color: #fff; }
+    .hero-stat strong { display: block; font-size: 2rem; font-weight: 700; }
+    .hero-stat span { font-size: .85rem; color: rgba(255,255,255,.6); }
+
+    /* phone mockups */
+    .hero-mockups {
+      position: absolute; right: 0; top: 80px; bottom: 0;
+      width: 45%; display: flex; align-items: flex-end; justify-content: flex-end;
+      padding-right: 40px;
+      pointer-events: none;
+    }
+    .phone {
+      width: 220px; border-radius: 36px;
+      background: #12203a;
+      border: 2px solid rgba(255,255,255,.15);
+      box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.05);
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-1 {
+      height: 420px;
+      transform: rotate(-6deg) translateX(30px);
+      z-index: 1;
+    }
+    .phone-2 {
+      height: 460px;
+      transform: rotate(3deg);
+      z-index: 2;
+      margin-bottom: 20px;
+    }
+    .phone-screen {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+    }
+    .phone-notch {
+      height: 28px; background: #0a1628;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .phone-notch::after {
+      content: ''; width: 60px; height: 8px;
+      background: #1e3060; border-radius: 4px;
+    }
+
+    /* flashcard screen */
+    .screen-flashcard {
+      padding: 16px;
+      flex: 1; display: flex; flex-direction: column; gap: 12px;
+    }
+    .screen-progress-row {
+      display: flex; gap: 4px; margin-bottom: 4px;
+    }
+    .screen-progress-row div {
+      height: 3px; flex: 1; border-radius: 2px; background: rgba(255,255,255,.15);
+    }
+    .screen-progress-row div:first-child { background: #60A5FA; }
+    .screen-progress-row div:nth-child(2) { background: #60A5FA; }
+    .screen-progress-row div:nth-child(3) { background: #60A5FA; }
+    .screen-card {
+      flex: 1; border-radius: 20px;
+      background: linear-gradient(135deg, #1e3a8a, #1A5CFF);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6px; padding: 20px;
+    }
+    .screen-card .word { font-size: 2rem; font-weight: 700; color: #fff; font-family: 'Spectral', serif; }
+    .screen-card .ipa { font-size: .8rem; color: rgba(255,255,255,.6); font-style: italic; }
+    .screen-card .zh { font-size: 1.1rem; color: rgba(255,255,255,.9); font-family: 'Noto Sans TC', sans-serif; }
+    .screen-card .badge {
+      font-size: .65rem; padding: 2px 8px; border-radius: 999px;
+      background: rgba(255,255,255,.2); color: #fff; font-weight: 600;
+    }
+    .screen-btns {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .screen-btn {
+      padding: 8px 4px; border-radius: 10px; text-align: center;
+      font-size: .65rem; font-weight: 600;
+    }
+    .screen-btn.again { background: rgba(232,0,61,.2); color: #f87171; }
+    .screen-btn.hard  { background: rgba(251,191,36,.2); color: #fbbf24; }
+    .screen-btn.good  { background: rgba(34,197,94,.2); color: #4ade80; }
+    .screen-btn.easy  { background: rgba(96,165,250,.2); color: #60a5fa; }
+
+    /* article screen */
+    .screen-article { padding: 16px; flex: 1; overflow: hidden; }
+    .screen-article-title {
+      font-size: .9rem; font-weight: 700; color: #fff;
+      font-family: 'Spectral', serif; margin-bottom: 8px; line-height: 1.3;
+    }
+    .screen-article-meta {
+      font-size: .6rem; color: rgba(255,255,255,.5); margin-bottom: 10px;
+    }
+    .screen-article-text {
+      font-size: .65rem; color: rgba(255,255,255,.7); line-height: 1.6;
+    }
+    .screen-article-text .tappable {
+      color: #60A5FA; border-bottom: 1px dashed rgba(96,165,250,.5);
+    }
+
+    /* ── Section shared ────────────────────────────────── */
+    section { padding: 100px 0; }
+    .section-header { text-align: center; margin-bottom: 64px; }
+    .section-header h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin-bottom: 16px; }
+    .section-header p { font-size: 1.05rem; color: var(--ink60); max-width: 560px; margin: 0 auto; line-height: 1.7; }
+
+    /* ── Features ──────────────────────────────────────── */
+    #features { background: #fff; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+    }
+    .feature-card {
+      border-radius: var(--radius); padding: 32px;
+      background: var(--bg);
+      border: 1px solid var(--ink30);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 20px;
+    }
+    .feature-card h3 { font-size: 1.2rem; margin-bottom: 10px; }
+    .feature-card p { font-size: .95rem; color: var(--ink60); line-height: 1.65; }
+
+    /* ── How it works ──────────────────────────────────── */
+    #how { background: var(--bg); }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0; position: relative;
+    }
+    .steps::before {
+      content: '';
+      position: absolute; top: 32px; left: 10%; right: 10%;
+      height: 2px; background: linear-gradient(90deg, var(--blue), var(--red));
+      z-index: 0;
+    }
+    .step { text-align: center; padding: 0 24px; position: relative; z-index: 1; }
+    .step-num {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 700; margin: 0 auto 20px;
+      box-shadow: 0 4px 20px rgba(26,92,255,.35);
+    }
+    .step h3 { font-size: 1.05rem; margin-bottom: 8px; }
+    .step p { font-size: .9rem; color: var(--ink60); line-height: 1.6; }
+
+    /* ── CEFR ──────────────────────────────────────────── */
+    #cefr { background: #fff; }
+    .cefr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+    .cefr-card {
+      border-radius: 16px; padding: 24px 16px; text-align: center;
+      color: #fff; position: relative; overflow: hidden;
+    }
+    .cefr-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: rgba(0,0,0,.15);
+      opacity: 0; transition: opacity .2s;
+    }
+    .cefr-card:hover::before { opacity: 1; }
+    .cefr-card .level { font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+    .cefr-card .name { font-size: .8rem; opacity: .85; margin-bottom: 12px; }
+    .cefr-card .count { font-size: 1.1rem; font-weight: 600; }
+    .cefr-card .count-label { font-size: .7rem; opacity: .7; }
+
+    /* ── Screenshots ───────────────────────────────────── */
+    #screenshots { background: var(--bg); }
+    .screenshots-track {
+      display: flex; gap: 24px; overflow-x: auto;
+      padding-bottom: 16px; scroll-snap-type: x mandatory;
+    }
+    .screenshots-track::-webkit-scrollbar { height: 4px; }
+    .screenshots-track::-webkit-scrollbar-track { background: var(--ink30); border-radius: 2px; }
+    .screenshots-track::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 2px; }
+    .screenshot-item {
+      flex-shrink: 0; scroll-snap-align: start;
+      width: 220px; border-radius: 28px; overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,.15);
+      background: #12203a; border: 2px solid rgba(255,255,255,.1);
+    }
+    .screenshot-label {
+      text-align: center; margin-top: 12px;
+      font-size: .85rem; color: var(--ink60); font-weight: 500;
+    }
+    .screenshot-wrapper { text-align: center; }
+
+    /* ── Download ──────────────────────────────────────── */
+    #download {
+      background: linear-gradient(135deg, #0a1628 0%, #1A3575 100%);
+      position: relative; overflow: hidden;
+    }
+    #download::before {
+      content: ''; position: absolute; top: -30%; right: -10%;
+      width: 60%; padding-bottom: 60%; border-radius: 50%;
+      background: radial-gradient(circle, rgba(26,92,255,.3) 0%, transparent 70%);
+    }
+    #download .section-header h2 { color: #fff; }
+    #download .section-header p { color: rgba(255,255,255,.65); }
+    #download .tag { background: rgba(255,255,255,.15); color: rgba(255,255,255,.9); }
+
+    .download-platforms {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      position: relative; z-index: 2;
+    }
+    .platform-card {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius); padding: 32px;
+      backdrop-filter: blur(12px);
+      transition: background .2s, transform .2s;
+    }
+    .platform-card:hover {
+      background: rgba(255,255,255,.12);
+      transform: translateY(-4px);
+    }
+    .platform-icon { font-size: 2.8rem; margin-bottom: 16px; }
+    .platform-card h3 { color: #fff; font-size: 1.2rem; margin-bottom: 8px; }
+    .platform-card p { color: rgba(255,255,255,.55); font-size: .9rem; margin-bottom: 24px; line-height: 1.5; }
+    .platform-card .btn { width: 100%; justify-content: center; }
+    .download-note {
+      text-align: center; margin-top: 40px;
+      font-size: .85rem; color: rgba(255,255,255,.4);
+      position: relative; z-index: 2;
+    }
+    .badge-row {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .store-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      color: #fff; text-decoration: none; font-size: .85rem;
+      transition: background .15s;
+    }
+    .store-badge:hover { background: rgba(255,255,255,.18); }
+    .store-badge .store-name { font-size: .7rem; opacity: .7; display: block; }
+    .store-badge .store-label { font-weight: 600; font-size: .95rem; display: block; line-height: 1; }
+
+    /* ── Google Sign-in Modal ──────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); backdrop-filter: blur(6px);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 24px; padding: 48px 40px;
+      max-width: 420px; width: 90%; text-align: center;
+      box-shadow: 0 32px 80px rgba(0,0,0,.3);
+      animation: modalIn .25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(20px) scale(.97); }
+      to   { opacity: 1; transform: none; }
+    }
+    .modal-logo {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: linear-gradient(135deg, var(--blue), #4C8DFF);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; margin: 0 auto 20px; color: #fff;
+    }
+    .modal h2 { font-size: 1.5rem; margin-bottom: 8px; }
+    .modal p { color: var(--ink60); font-size: .95rem; margin-bottom: 32px; line-height: 1.6; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--bg); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; color: var(--ink60);
+    }
+    .modal { position: relative; }
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0; color: var(--ink60); font-size: .85rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--ink30);
+    }
+    .google-btn-container { display: flex; justify-content: center; }
+
+    /* ── Footer ────────────────────────────────────────── */
+    footer {
+      background: var(--ink); color: rgba(255,255,255,.55);
+      padding: 60px 0 32px;
+    }
+    .footer-inner {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-brand .nav-logo { color: #fff; margin-bottom: 12px; }
+    .footer-brand p { font-size: .9rem; line-height: 1.6; }
+    footer h4 { color: #fff; font-size: .9rem; font-weight: 600; margin-bottom: 16px; letter-spacing: .04em; }
+    footer ul { list-style: none; }
+    footer ul li { margin-bottom: 10px; }
+    footer ul a { color: rgba(255,255,255,.55); text-decoration: none; font-size: .9rem; transition: color .15s; }
+    footer ul a:hover { color: #fff; }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,.1);
+      padding-top: 24px; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: gap;
+      font-size: .85rem;
+    }
+    .tricolor-bar {
+      display: flex; height: 4px; border-radius: 2px; overflow: hidden;
+      margin-bottom: 32px;
+    }
+    .tricolor-bar div { flex: 1; }
+
+    /* ── Animations ────────────────────────────────────── */
+    .fade-up {
+      opacity: 0; transform: translateY(30px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: none; }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero-mockups { display: none; }
+      .hero { text-align: left; }
+      .steps::before { display: none; }
+      .steps { grid-template-columns: 1fr; gap: 40px; }
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 2.4rem; }
+      .footer-inner { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ───────────────────────────────────────── -->
+<nav>
+  <div class="container nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="logo-icon">🇫🇷</div>
+      FrenchMind
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">功能</a></li>
+      <li><a href="#how">學習方法</a></li>
+      <li><a href="#cefr">程度分級</a></li>
+      <li><a href="#download">下載</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button id="google-signin-btn" onclick="openModal()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        使用 Google 登入
+      </button>
+      <div id="user-avatar-area">
+        <img id="user-avatar" src="" alt="user" />
+        <span id="user-name"></span>
+        <button id="signout-btn" onclick="signOut()">登出</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container hero-content">
+    <div class="tricolor">
+      <span style="background:#002395"></span>
+      <span style="background:#EDEDED"></span>
+      <span style="background:#ED2939"></span>
+    </div>
+    <div class="tag">法語學習 · 繁體中文介面</div>
+    <h1>
+      用科學方法<br/>
+      <span class="accent">精通法語</span>
+    </h1>
+    <p>
+      20,000 個法文單字配繁體中文翻譯，搭配間隔重複演算法，
+      每天只需 15 分鐘，從 A1 到 C2 循序漸進。
+    </p>
+    <div class="hero-actions">
+      <a href="#download" class="btn btn-primary">
+        <span>📲</span> 立即下載
+      </a>
+      <button class="btn btn-ghost" onclick="openModal()">
+        <span>▶</span> 登入帳號
+      </button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <strong>20,000+</strong>
+        <span>法文單字</span>
+      </div>
+      <div class="hero-stat">
+        <strong>6 級</strong>
+        <span>CEFR 分級</span>
+      </div>
+      <div class="hero-stat">
+        <strong>SM-2</strong>
+        <span>間隔重複演算法</span>
+      </div>
+      <div class="hero-stat">
+        <strong>免費</strong>
+        <span>完全開源</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phone mockups -->
+  <div class="hero-mockups">
+    <!-- Flashcard phone -->
+    <div class="phone phone-1">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        <div class="screen-flashcard">
+          <div class="screen-progress-row">
+            <div></div><div></div><div></div>
+            <div style="background:rgba(255,255,255,.15)"></div>
+            <div style="background:rgba(255,255,255,.15)"></div>
+          </div>
+          <div class="screen-card">
+            <div class="badge">A2 · nom</div>
+            <div class="word">maison</div>
+            <div class="ipa">/mɛ.zɔ̃/</div>
+            <div class="zh">房子、家</div>
+          </div>
+          <div class="screen-btns">
+            <div class="screen-btn again">再來一次<br/><small>明天</small></div>
+            <div class="screen-btn hard">困難<br/><small>稍後</small></div>
+            <div class="screen-btn good">良好<br/><small>4天後</small></div>
+            <div class="screen-btn easy">簡單<br/><small>10天後</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Article phone -->
+    <div class="phone phone-2">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        <div class="screen-article">
+          <div style="font-size:.6rem;color:rgba(96,165,250,.8);margin-bottom:6px;">B1 · 今日文章</div>
+          <div class="screen-article-title">La gastronomie française à travers le monde</div>
+          <div class="screen-article-meta">閱讀時間 5 分鐘 · 點擊單字查詢</div>
+          <div class="screen-article-text">
+            La <span class="tappable">cuisine</span> française est reconnue dans le monde entier pour sa <span class="tappable">richesse</span> et sa <span class="tappable">diversité</span>. Les <span class="tappable">chefs</span> français ont influencé la gastronomie mondiale depuis des siècles...
+          </div>
+          <div style="margin-top:12px;padding:10px;background:rgba(96,165,250,.1);border-radius:12px;border-left:3px solid #60A5FA;">
+            <div style="font-size:.65rem;color:#60A5FA;font-weight:600;">cuisine</div>
+            <div style="font-size:.8rem;color:#fff;margin:2px 0;">廚藝、烹飪</div>
+            <div style="font-size:.6rem;color:rgba(255,255,255,.5);">/kɥi.zin/ · nom féminin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="tag">核心功能</div>
+      <h2>一個 App，完整法語學習</h2>
+      <p>從單字到文法，從閱讀到複習，涵蓋所有學習環節。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(26,92,255,.1);">🃏</div>
+        <h3>智慧單字卡</h3>
+        <p>SM-2 間隔重複演算法，根據你的記憶狀態動態調整複習時間。4段評分（再試一次 / 困難 / 良好 / 簡單），精準追蹤遺忘曲線。</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(232,0,61,.1);">📰</div>
+        <h3>每日法語文章</h3>
+        <p>按 CEFR 程度提供文章，所有單字皆可點擊查詢繁體中文釋義，自動加入單字牌組。配合朗讀音訊，提升聽讀能力。</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(34,197,94,.1);">📚</div>
+        <h3>文法課程</h3>
+        <p>從基礎動詞變化到虛擬式，互動練習題涵蓋選擇題、填空、翻譯、重組句子多種題型，完成後自動升級 CEFR 程度。</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(251,191,36,.1);">📖</div>
+        <h3>錯誤筆記本</h3>
+        <p>自動記錄答錯的單字，顯示錯誤次數與最後錯誤時間。可加入個人筆記，標記解決後從清單移除。</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(139,92,246,.1);">🔔</div>
+        <h3>每日推播提醒</h3>
+        <p>智慧通知系統，根據你的複習排程發送提醒。從不打擾，只在需要複習時才提醒。支援 iOS 與 Android。</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(6,182,212,.1);">🏆</div>
+        <h3>連續學習與成就</h3>
+        <p>追蹤每日連續學習天數、XP 經驗值與成就徽章。13 種成就等你解鎖，激勵你持續進步不間斷。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ───────────────────────────────────────── -->
+<section id="how">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="tag">學習流程</div>
+      <h2>每天 15 分鐘，循序漸進</h2>
+      <p>科學設計的學習流程，讓每一分鐘都花在刀口上。</p>
+    </div>
+    <div class="steps">
+      <div class="step fade-up">
+        <div class="step-num">1</div>
+        <h3>設定程度</h3>
+        <p>從 A1 初學者到 C2 精通，選擇你目前的法語程度，或完成快速測驗讓系統自動評估。</p>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">2</div>
+        <h3>每日單字複習</h3>
+        <p>系統根據 SM-2 演算法計算今日應複習的單字，通常 10–20 張。評分後自動安排下次複習時間。</p>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">3</div>
+        <h3>閱讀今日文章</h3>
+        <p>閱讀一篇符合你程度的法語文章。不懂的單字直接點擊查詢，系統自動加入你的單字牌組。</p>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">4</div>
+        <h3>練習文法</h3>
+        <p>完成一到兩個文法練習單元，鞏固今天學到的語言規則。及格後自動解鎖下一個程度。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CEFR Levels ────────────────────────────────────────── -->
+<section id="cefr">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="tag">CEFR 程度分級</div>
+      <h2>從零開始，到流利溝通</h2>
+      <p>歐洲語言共同參考框架（CEFR）六級分類，20,000 個單字完整覆蓋。</p>
+    </div>
+    <div class="cefr-grid fade-up">
+      <div class="cefr-card" style="background:linear-gradient(135deg,#4CAF50,#2E7D32);">
+        <div class="level">A1</div>
+        <div class="name">入門級</div>
+        <div class="count">~500</div>
+        <div class="count-label">核心單字</div>
+      </div>
+      <div class="cefr-card" style="background:linear-gradient(135deg,#8BC34A,#558B2F);">
+        <div class="level">A2</div>
+        <div class="name">初級</div>
+        <div class="count">~1,500</div>
+        <div class="count-label">核心單字</div>
+      </div>
+      <div class="cefr-card" style="background:linear-gradient(135deg,#2196F3,#1565C0);">
+        <div class="level">B1</div>
+        <div class="name">中級</div>
+        <div class="count">~3,500</div>
+        <div class="count-label">核心單字</div>
+      </div>
+      <div class="cefr-card" style="background:linear-gradient(135deg,#03A9F4,#01579B);">
+        <div class="level">B2</div>
+        <div class="name">中高級</div>
+        <div class="count">~5,000</div>
+        <div class="count-label">核心單字</div>
+      </div>
+      <div class="cefr-card" style="background:linear-gradient(135deg,#FF9800,#E65100);">
+        <div class="level">C1</div>
+        <div class="name">高級</div>
+        <div class="count">~5,000</div>
+        <div class="count-label">核心單字</div>
+      </div>
+      <div class="cefr-card" style="background:linear-gradient(135deg,#9C27B0,#4A148C);">
+        <div class="level">C2</div>
+        <div class="name">精通級</div>
+        <div class="count">~4,500</div>
+        <div class="count-label">核心單字</div>
+      </div>
+    </div>
+
+    <!-- Tech highlights -->
+    <div style="margin-top:60px; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px;">
+      <div style="border:1px solid var(--ink30);border-radius:16px;padding:24px;background:#fff;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🔬</div>
+        <h3 style="font-size:1rem;margin-bottom:8px;">SM-2 間隔重複</h3>
+        <p style="font-size:.88rem;color:var(--ink60);line-height:1.6;">修改版 SM-2 演算法，4 段評分，±5% 模糊因子，遺忘曲線 R = e^(−t/EF)，精準計算下次複習時機。</p>
+      </div>
+      <div style="border:1px solid var(--ink30);border-radius:16px;padding:24px;background:#fff;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🌐</div>
+        <h3 style="font-size:1rem;margin-bottom:8px;">繁體中文優先</h3>
+        <p style="font-size:.88rem;color:var(--ink60);line-height:1.6;">所有單字翻譯以繁體中文（zh-TW）為主，English 為輔。300+ 核心詞彙手動審校，確保準確性。</p>
+      </div>
+      <div style="border:1px solid var(--ink30);border-radius:16px;padding:24px;background:#fff;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">📡</div>
+        <h3 style="font-size:1rem;margin-bottom:8px;">離線支援</h3>
+        <p style="font-size:.88rem;color:var(--ink60);line-height:1.6;">Hive 本地快取，單字卡與文章離線可用。網路恢復後自動同步學習進度至雲端。</p>
+      </div>
+      <div style="border:1px solid var(--ink30);border-radius:16px;padding:24px;background:#fff;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🔒</div>
+        <h3 style="font-size:1rem;margin-bottom:8px;">資料安全</h3>
+        <p style="font-size:.88rem;color:var(--ink60);line-height:1.6;">Supabase Row Level Security，所有學習資料完全隔離。Google OAuth 2.0 / PKCE 流程，零密碼洩露風險。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Screenshots carousel ───────────────────────────────── -->
+<section id="screenshots">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="tag">畫面預覽</div>
+      <h2>簡潔美觀的介面設計</h2>
+      <p>Material 3 設計語言，支援深色 / 淺色主題自動切換。</p>
+    </div>
+    <div class="screenshots-track fade-up">
+      <!-- Each screenshot is a phone mockup with screen content -->
+      <!-- Dashboard -->
+      <div>
+        <div class="screenshot-item">
+          <div style="background:#0D1117;height:420px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:.7rem;color:rgba(255,255,255,.5);margin-top:8px;">早安！今天繼續加油 🔥 7天</div>
+            <div style="background:linear-gradient(135deg,#1A5CFF,#4C8DFF);border-radius:16px;padding:16px;color:#fff;">
+              <div style="font-size:.7rem;opacity:.7;">今日待複習</div>
+              <div style="font-size:2rem;font-weight:700;">23 張</div>
+              <div style="height:6px;background:rgba(255,255,255,.2);border-radius:3px;margin:8px 0;">
+                <div style="height:100%;width:35%;background:#fff;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:.65rem;opacity:.7;">已完成 8 / 23</div>
+            </div>
+            <div style="background:#1a1a2e;border-radius:12px;padding:12px;color:#fff;font-size:.7rem;">
+              <div style="opacity:.5;margin-bottom:4px;">今日文章 · B1</div>
+              <div style="font-weight:600;">La gastronomie française</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div style="background:#1a1a2e;border-radius:10px;padding:10px;text-align:center;color:#fff;font-size:.65rem;">📚 文法<br/><span style="opacity:.5;">2 課待完成</span></div>
+              <div style="background:#1a1a2e;border-radius:10px;padding:10px;text-align:center;color:#fff;font-size:.65rem;">📖 錯誤<br/><span style="opacity:.5;">5 個單字</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-label">主頁儀表板</div>
+      </div>
+
+      <!-- Flashcard -->
+      <div>
+        <div class="screenshot-item">
+          <div style="background:#0D1117;height:420px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:3px;margin-top:8px;">
+              <div style="flex:1;height:3px;background:#1A5CFF;border-radius:2px;"></div>
+              <div style="flex:1;height:3px;background:#1A5CFF;border-radius:2px;"></div>
+              <div style="flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:2px;"></div>
+              <div style="flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:2px;"></div>
+              <div style="flex:1;height:3px;background:rgba(255,255,255,.15);border-radius:2px;"></div>
+            </div>
+            <div style="flex:1;background:linear-gradient(135deg,#1e3a8a,#1A5CFF);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px;">
+              <div style="font-size:.65rem;background:rgba(255,255,255,.2);color:#fff;padding:2px 10px;border-radius:999px;">B1 · verbe</div>
+              <div style="font-size:2.2rem;font-weight:700;color:#fff;font-family:'Spectral',serif;">comprendre</div>
+              <div style="font-size:.75rem;color:rgba(255,255,255,.6);font-style:italic;">/kɔ̃.pʁɑ̃dʁ/</div>
+              <div style="width:40px;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
+              <div style="font-size:1.2rem;color:#fff;font-family:'Noto Sans TC',sans-serif;">理解、明白</div>
+              <div style="font-size:.7rem;color:rgba(255,255,255,.5);font-style:italic;">Je comprends le français.</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div style="padding:8px;border-radius:10px;background:rgba(232,0,61,.15);color:#f87171;text-align:center;font-size:.65rem;font-weight:600;">再來一次<br/>明天</div>
+              <div style="padding:8px;border-radius:10px;background:rgba(251,191,36,.15);color:#fbbf24;text-align:center;font-size:.65rem;font-weight:600;">困難<br/>3天後</div>
+              <div style="padding:8px;border-radius:10px;background:rgba(34,197,94,.15);color:#4ade80;text-align:center;font-size:.65rem;font-weight:600;">良好<br/>7天後</div>
+              <div style="padding:8px;border-radius:10px;background:rgba(96,165,250,.15);color:#60a5fa;text-align:center;font-size:.65rem;font-weight:600;">簡單<br/>14天後</div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-label">單字卡複習</div>
+      </div>
+
+      <!-- Article -->
+      <div>
+        <div class="screenshot-item">
+          <div style="background:#0D1117;height:420px;padding:16px;display:flex;flex-direction:column;gap:8px;overflow:hidden;">
+            <div style="font-size:.6rem;color:#60A5FA;">B1 · 今日文章 · 5 分鐘閱讀</div>
+            <div style="font-size:.9rem;font-weight:700;color:#fff;font-family:'Spectral',serif;line-height:1.3;">La gastronomie française à travers le monde</div>
+            <div style="flex:1;font-size:.68rem;color:rgba(255,255,255,.7);line-height:1.7;overflow:hidden;">
+              La <span style="color:#60A5FA;border-bottom:1px dashed rgba(96,165,250,.5);">cuisine</span> française est reconnue dans le monde entier pour sa <span style="color:#60A5FA;border-bottom:1px dashed rgba(96,165,250,.5);">richesse</span> et sa diversité. Les <span style="color:#60A5FA;border-bottom:1px dashed rgba(96,165,250,.5);">chefs</span> français ont influencé la <span style="color:#60A5FA;border-bottom:1px dashed rgba(96,165,250,.5);">gastronomie</span> mondiale depuis des siècles, exportant leurs techniques...
+            </div>
+            <div style="background:#1a2744;border-radius:12px;padding:10px;border-left:3px solid #60A5FA;">
+              <div style="font-size:.65rem;color:#60A5FA;font-weight:600;">gastronomie</div>
+              <div style="font-size:.8rem;color:#fff;">美食學、烹飪藝術</div>
+              <div style="font-size:.6rem;color:rgba(255,255,255,.5);">/ɡas.tʁɔ.nɔ.mi/ · nom féminin · B2</div>
+              <div style="margin-top:6px;padding:4px 8px;background:#1A5CFF;border-radius:6px;font-size:.6rem;color:#fff;display:inline-block;">+ 加入單字卡</div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-label">文章閱讀</div>
+      </div>
+
+      <!-- Grammar -->
+      <div>
+        <div class="screenshot-item">
+          <div style="background:#0D1117;height:420px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:.7rem;color:rgba(255,255,255,.5);margin-top:8px;">文法課程 · 第 3 課 / 8 課</div>
+            <div style="background:#1a1a2e;border-radius:12px;padding:12px;color:#fff;">
+              <div style="font-size:.65rem;color:#60A5FA;margin-bottom:4px;">B1 · 虛擬式現在時</div>
+              <div style="font-size:.8rem;font-weight:600;margin-bottom:6px;">Il faut que + 虛擬式</div>
+              <div style="font-size:.68rem;color:rgba(255,255,255,.7);line-height:1.6;">表達必要性或建議，主詞改變時需使用虛擬式...</div>
+            </div>
+            <div style="background:#1a2744;border-radius:12px;padding:12px;color:#fff;">
+              <div style="font-size:.65rem;color:#fbbf24;margin-bottom:6px;">練習 2 / 4</div>
+              <div style="font-size:.75rem;margin-bottom:10px;">選擇正確的虛擬式形式：</div>
+              <div style="font-size:.8rem;font-style:italic;margin-bottom:8px;">Il faut que tu ___ à l'heure.</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);font-size:.7rem;color:#fff;">arrives</div>
+                <div style="padding:6px 10px;border-radius:8px;background:#1A5CFF;font-size:.7rem;color:#fff;">arrives ✓</div>
+                <div style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);font-size:.7rem;color:#fff;">arriver</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-label">文法練習</div>
+      </div>
+
+      <!-- Mistake book -->
+      <div>
+        <div class="screenshot-item">
+          <div style="background:#0D1117;height:420px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:.8rem;color:#fff;font-weight:600;margin-top:8px;">錯誤筆記本</div>
+            <div style="display:flex;gap:10px;">
+              <div style="font-size:.7rem;color:#1A5CFF;border-bottom:2px solid #1A5CFF;padding-bottom:4px;">未解決 (5)</div>
+              <div style="font-size:.7rem;color:rgba(255,255,255,.4);">已解決 (12)</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
+              <div style="background:#1a1a2e;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">
+                <div style="background:#ef4444;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#fff;font-weight:700;flex-shrink:0;">3</div>
+                <div style="flex:1;">
+                  <div style="font-size:.8rem;color:#fff;font-family:'Spectral',serif;">apercevoir</div>
+                  <div style="font-size:.65rem;color:rgba(255,255,255,.5);">察覺、瞥見</div>
+                </div>
+              </div>
+              <div style="background:#1a1a2e;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">
+                <div style="background:#f97316;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#fff;font-weight:700;flex-shrink:0;">2</div>
+                <div style="flex:1;">
+                  <div style="font-size:.8rem;color:#fff;font-family:'Spectral',serif;">néanmoins</div>
+                  <div style="font-size:.65rem;color:rgba(255,255,255,.5);">儘管如此、然而</div>
+                </div>
+              </div>
+              <div style="background:#1a1a2e;border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px;">
+                <div style="background:#6b7280;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#fff;font-weight:700;flex-shrink:0;">1</div>
+                <div style="flex:1;">
+                  <div style="font-size:.8rem;color:#fff;font-family:'Spectral',serif;">davantage</div>
+                  <div style="font-size:.65rem;color:rgba(255,255,255,.5);">更多、進一步地</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-label">錯誤筆記本</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Download ───────────────────────────────────────────── -->
+<section id="download">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="tag">立即下載</div>
+      <h2 style="color:#fff;">選擇你的平台</h2>
+      <p>Android、iOS、Windows、macOS 全平台支援，學習進度雲端同步。</p>
+    </div>
+    <!-- 版本資訊橫幅 -->
+    <div id="release-info" style="
+      display:none; text-align:center; margin-bottom:28px;
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+      border-radius:12px; padding:14px; position:relative; z-index:2;
+      color:rgba(255,255,255,.8); font-size:.9rem;
+    ">
+      最新版本：<strong id="release-tag" style="color:#60A5FA;"></strong>
+      　·　發布於 <span id="release-date"></span>
+      　·　<a id="release-notes-link" href="#" target="_blank" rel="noopener"
+              style="color:#93C5FD;">查看更新說明 →</a>
+    </div>
+
+    <div class="download-platforms">
+      <!-- Android -->
+      <div class="platform-card fade-up">
+        <div class="platform-icon">🤖</div>
+        <h3>Android</h3>
+        <p>支援 Android 8.0+（API 26）。直接下載 APK，安裝前請在設定中開啟「允許未知來源」。</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <a id="dl-android" href="#" class="btn btn-primary" target="_blank" rel="noopener">
+            <span>📥</span> 下載 APK
+          </a>
+          <a id="dl-releases" href="#" class="store-badge" target="_blank" rel="noopener">
+            <span>📋</span>
+            <span>
+              <span class="store-name">GitHub Releases</span>
+              <span class="store-label">所有版本紀錄</span>
+            </span>
+          </a>
+        </div>
+        <p style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:12px;margin-bottom:0;line-height:1.5;">
+          安裝步驟：下載 APK → 設定 → 安全性 → 開啟未知來源 → 點擊 APK 安裝
+        </p>
+      </div>
+
+      <!-- iOS -->
+      <div class="platform-card fade-up">
+        <div class="platform-icon">📱</div>
+        <h3>iPhone / iPad</h3>
+        <p>支援 iOS 14.0+。從 GitHub 下載 IPA 檔，使用 <strong style="color:#fff;">AltStore</strong> 或 <strong style="color:#fff;">Sideloadly</strong> 免費側載安裝。</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <a id="dl-ios" href="#" class="btn btn-primary" target="_blank" rel="noopener">
+            <span>📥</span> 下載 IPA
+          </a>
+          <a href="https://altstore.io" class="store-badge" target="_blank" rel="noopener">
+            <span>🔧</span>
+            <span>
+              <span class="store-name">免費側載工具</span>
+              <span class="store-label">下載 AltStore</span>
+            </span>
+          </a>
+        </div>
+        <p style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:12px;margin-bottom:0;line-height:1.5;">
+          安裝步驟：安裝 AltStore → 下載 IPA → 用 AltStore 開啟 IPA → 安裝完成
+        </p>
+      </div>
+
+      <!-- Desktop -->
+      <div class="platform-card fade-up">
+        <div class="platform-icon">💻</div>
+        <h3>桌面版</h3>
+        <p>支援 Windows 10+ 與 macOS 11+。解壓縮後即可執行，無需安裝程式。</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <a id="dl-windows" href="#" class="store-badge" target="_blank" rel="noopener">
+            <span>🪟</span>
+            <span>
+              <span class="store-name">Windows 10/11 · 64-bit</span>
+              <span class="store-label">下載 .zip</span>
+            </span>
+          </a>
+          <a id="dl-macos" href="#" class="store-badge" target="_blank" rel="noopener">
+            <span>🍎</span>
+            <span>
+              <span class="store-name">macOS 11+ · Apple/Intel</span>
+              <span class="store-label">下載 .dmg</span>
+            </span>
+          </a>
+        </div>
+        <p style="font-size:.75rem;color:rgba(255,255,255,.35);margin-top:12px;margin-bottom:0;line-height:1.5;">
+          Windows：解壓縮 ZIP → 執行 french_learning_app.exe<br/>
+          macOS：開啟 DMG → 拖入 Applications → 右鍵開啟
+        </p>
+      </div>
+    </div>
+    <p class="download-note">
+      🔒 完全免費 · 開放原始碼 (MIT) · 不含廣告 · 不追蹤個人資料 · 原始碼托管於 GitHub
+    </p>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="tricolor-bar">
+      <div style="background:#002395;"></div>
+      <div style="background:#EDEDED;"></div>
+      <div style="background:#ED2939;"></div>
+    </div>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo" style="display:inline-flex;margin-bottom:12px;">
+          <div class="logo-icon">🇫🇷</div>
+          FrenchMind
+        </a>
+        <p>以科學為基礎的法語學習應用程式，<br/>為繁體中文使用者打造的最佳工具。</p>
+      </div>
+      <div>
+        <h4>功能</h4>
+        <ul>
+          <li><a href="#features">單字卡</a></li>
+          <li><a href="#features">每日文章</a></li>
+          <li><a href="#features">文法課程</a></li>
+          <li><a href="#features">錯誤筆記</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>資源</h4>
+        <ul>
+          <li><a href="docs/使用說明書.md">使用說明書</a></li>
+          <li><a href="docs/安裝說明.md">安裝說明</a></li>
+          <li><a id="footer-github" href="#" target="_blank" rel="noopener">GitHub 原始碼</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>下載</h4>
+        <ul>
+          <li><a id="footer-android" href="#download" target="_blank" rel="noopener">Android APK</a></li>
+          <li><a id="footer-ios" href="#download" target="_blank" rel="noopener">iOS IPA</a></li>
+          <li><a id="footer-windows" href="#download" target="_blank" rel="noopener">Windows</a></li>
+          <li><a id="footer-macos" href="#download" target="_blank" rel="noopener">macOS</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 FrenchMind. MIT License.</span>
+      <span>Built with Flutter · Supabase · ❤️</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Google Sign-in Modal ───────────────────────────────── -->
+<div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-logo">🇫🇷</div>
+    <h2>登入 FrenchMind</h2>
+    <p>登入後可同步學習進度、跨裝置使用，並保存你的單字卡與文法練習記錄。</p>
+    <div class="google-btn-container">
+      <!-- Google Identity Services button will render here -->
+      <div id="g_id_onload"
+           data-client_id="YOUR_GOOGLE_CLIENT_ID"
+           data-callback="handleCredentialResponse"
+           data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-size="large"
+           data-theme="outline"
+           data-text="signin_with"
+           data-locale="zh-TW"
+           data-shape="rectangular"
+           data-logo_alignment="left"
+           data-width="300">
+      </div>
+    </div>
+    <div class="divider">或</div>
+    <p style="font-size:.82rem;color:var(--ink60);line-height:1.5;">
+      繼續使用即表示你同意我們的服務條款與隱私政策。<br/>
+      我們不會儲存你的 Google 密碼。
+    </p>
+  </div>
+</div>
+
+<!-- ── Coming Soon Toast ──────────────────────────────────── -->
+<div id="toast" style="
+  position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(100px);
+  background:#333; color:#fff; padding:12px 24px; border-radius:12px;
+  font-size:.9rem; font-weight:500; z-index:999; transition:transform .3s ease;
+  white-space:nowrap; box-shadow:0 8px 32px rgba(0,0,0,.3);
+"></div>
+
+<script>
+// ── Intersection Observer for fade-up animations ──────────
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+// ── Google Sign-In ────────────────────────────────────────
+function handleCredentialResponse(response) {
+  // Decode JWT to get user info
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const { name, email, picture } = payload;
+
+  // Store in sessionStorage
+  sessionStorage.setItem('user', JSON.stringify({ name, email, picture }));
+
+  // Update UI
+  showUserAvatar(name, picture);
+  closeModal();
+  showToast(`歡迎回來，${name.split(' ')[0]}！`);
+}
+
+function showUserAvatar(name, picture) {
+  document.getElementById('google-signin-btn').style.display = 'none';
+  const area = document.getElementById('user-avatar-area');
+  area.style.display = 'flex';
+  document.getElementById('user-avatar').src = picture || '';
+  document.getElementById('user-name').textContent = name.split(' ')[0];
+}
+
+function signOut() {
+  sessionStorage.removeItem('user');
+  document.getElementById('google-signin-btn').style.display = 'flex';
+  document.getElementById('user-avatar-area').style.display = 'none';
+  if (window.google?.accounts?.id) {
+    google.accounts.id.disableAutoSelect();
+  }
+  showToast('已登出');
+}
+
+// Restore session on reload
+window.addEventListener('load', () => {
+  const stored = sessionStorage.getItem('user');
+  if (stored) {
+    const { name, picture } = JSON.parse(stored);
+    showUserAvatar(name, picture);
+  }
+});
+
+// ── Modal ─────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── Toast ─────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => { t.style.transform = 'translateX(-50%) translateY(100px)'; }, 3000);
+}
+
+// ── GitHub Releases — 自動抓取最新版本 ───────────────────
+async function loadLatestRelease() {
+  // 若尚未設定 GitHub 帳號，跳過 API 呼叫
+  if (GITHUB_USER === 'YOUR_GITHUB_USERNAME') {
+    setFallbackLinks();
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases/latest`,
+      { headers: { Accept: 'application/vnd.github+json' } }
+    );
+    if (!res.ok) throw new Error('no release');
+    const data = await res.json();
+
+    const tag = data.tag_name;          // e.g. "v1.0.0"
+    const date = new Date(data.published_at).toLocaleDateString('zh-TW');
+    const pageUrl = data.html_url;
+
+    // 找各平台的下載連結
+    const assets = data.assets || [];
+    const find = (keyword) => {
+      const a = assets.find(a => a.name.toLowerCase().includes(keyword));
+      return a ? a.browser_download_url : pageUrl;
+    };
+
+    const apkUrl  = find('android');
+    const ipaUrl  = find('ios');
+    const winUrl  = find('windows');
+    const macUrl  = find('macos');
+
+    // 更新版本資訊橫幅
+    document.getElementById('release-info').style.display = 'block';
+    document.getElementById('release-tag').textContent = tag;
+    document.getElementById('release-date').textContent = date;
+    document.getElementById('release-notes-link').href = pageUrl;
+
+    // 更新下載按鈕
+    setLinks(apkUrl, ipaUrl, winUrl, macUrl, pageUrl);
+
+  } catch (e) {
+    // API 失敗時退回到 releases 頁面
+    setFallbackLinks();
+  }
+}
+
+function setLinks(apk, ipa, win, mac, page) {
+  const RELEASES = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases`;
+  document.getElementById('dl-android').href  = apk  || page;
+  document.getElementById('dl-ios').href       = ipa  || page;
+  document.getElementById('dl-windows').href   = win  || page;
+  document.getElementById('dl-macos').href     = mac  || page;
+  document.getElementById('dl-releases').href  = page || RELEASES;
+
+  // footer
+  document.getElementById('footer-github').href  = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}`;
+  document.getElementById('footer-android').href = apk  || page;
+  document.getElementById('footer-ios').href     = ipa  || page;
+  document.getElementById('footer-windows').href = win  || page;
+  document.getElementById('footer-macos').href   = mac  || page;
+}
+
+function setFallbackLinks() {
+  const RELEASES = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases`;
+  setLinks(RELEASES, RELEASES, RELEASES, RELEASES, RELEASES);
+}
+
+// 頁面載入時執行
+window.addEventListener('DOMContentLoaded', loadLatestRelease);
+</script>
+</body>
+</html>
