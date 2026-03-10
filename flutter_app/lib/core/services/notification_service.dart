@@ -7,25 +7,31 @@ class NotificationService {
   final _localNotif = FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
-    const androidChannel = AndroidNotificationChannel(
-      'review_channel',
-      'Review Reminders',
-      description: 'Daily spaced-repetition review reminders',
-      importance:  Importance.high,
-    );
+    try {
+      const androidChannel = AndroidNotificationChannel(
+        'review_channel',
+        'Review Reminders',
+        description: 'Daily spaced-repetition review reminders',
+        importance:  Importance.high,
+      );
 
-    await _localNotif
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
+      await _localNotif
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
 
-    await _localNotif.initialize(
-      const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        iOS: DarwinInitializationSettings(),
-      ),
-    );
+      await _localNotif.initialize(
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          iOS:     DarwinInitializationSettings(),
+        ),
+      );
+    } catch (_) {
+      // Notifications not supported on this platform — safe to ignore
+    }
   }
 
-  Future<void> cancelAll() => _localNotif.cancelAll();
+  Future<void> cancelAll() async {
+    try { await _localNotif.cancelAll(); } catch (_) {}
+  }
 }

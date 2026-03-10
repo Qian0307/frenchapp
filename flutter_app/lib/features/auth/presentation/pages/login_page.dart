@@ -15,8 +15,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordCtrl = TextEditingController();
   final _formKey      = GlobalKey<FormState>();
 
-  bool _isLoading      = false;
-  bool _obscurePass    = true;
+  bool _isLoading   = false;
+  bool _obscurePass = true;
   String? _error;
 
   @override
@@ -43,10 +43,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    await Supabase.instance.client.auth.signInWithOAuth(OAuthProvider.google);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,13 +57,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40),
-                // Logo / title
                 Center(
                   child: Column(
                     children: [
                       Container(
-                        padding:     const EdgeInsets.all(20),
-                        decoration:  BoxDecoration(
+                        padding:    const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
                           color:        theme.colorScheme.primary.withAlpha(20),
                           borderRadius: BorderRadius.circular(24),
                         ),
@@ -77,7 +72,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       const SizedBox(height: 16),
                       Text('Bienvenue', style: theme.textTheme.displayMedium),
                       const SizedBox(height: 4),
-                      Text('Sign in to continue learning French',
+                      Text('登入繼續學習法語',
                           style: theme.textTheme.bodyLarge!.copyWith(
                               color: theme.colorScheme.onSurface.withAlpha(153))),
                     ],
@@ -85,25 +80,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: 48),
 
-                // Email
                 TextFormField(
-                  controller:  _emailCtrl,
+                  controller:   _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  decoration:  const InputDecoration(
-                    labelText:   'Email',
-                    prefixIcon:  Icon(Icons.email_outlined),
+                  decoration:   const InputDecoration(
+                    labelText:  'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (v) =>
-                      v == null || !v.contains('@') ? 'Enter a valid email' : null,
+                      v == null || !v.contains('@') ? '請輸入有效的 Email' : null,
                 ),
                 const SizedBox(height: 12),
 
-                // Password
                 TextFormField(
-                  controller:   _passwordCtrl,
-                  obscureText:  _obscurePass,
-                  decoration:   InputDecoration(
-                    labelText: 'Password',
+                  controller:  _passwordCtrl,
+                  obscureText: _obscurePass,
+                  decoration:  InputDecoration(
+                    labelText:  '密碼',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePass
@@ -114,66 +107,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                   validator: (v) =>
-                      v == null || v.length < 6 ? 'Min 6 characters' : null,
+                      v == null || v.length < 6 ? '密碼至少 6 個字元' : null,
                 ),
-                const SizedBox(height: 8),
 
-                // Error
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 4),
+                    padding: const EdgeInsets.only(top: 8),
                     child: Text(_error!,
                         style: TextStyle(color: theme.colorScheme.error)),
                   ),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text('Forgot password?'),
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 24),
 
-                // Sign in button
                 FilledButton(
                   onPressed: _isLoading ? null : _signIn,
                   child: _isLoading
-                      ? const SizedBox(
-                          width:  20,
-                          height: 20,
-                          child:  CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Sign In'),
+                      ? const SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('登入'),
                 ),
                 const SizedBox(height: 16),
 
-                // Divider
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('or', style: theme.textTheme.bodySmall),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Google
-                OutlinedButton.icon(
-                  onPressed: _signInWithGoogle,
-                  icon:  const Icon(Icons.g_mobiledata_rounded, size: 24),
-                  label: const Text('Continue with Google'),
-                ),
-                const SizedBox(height: 24),
-
-                // Register
                 Center(
                   child: TextButton(
                     onPressed: () => context.push('/auth/register'),
-                    child: const Text("Don't have an account? Register"),
+                    child: const Text('還沒有帳號？點此註冊'),
                   ),
                 ),
               ],
