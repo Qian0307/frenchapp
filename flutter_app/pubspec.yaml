@@ -1,0 +1,93 @@
+name: french_learning_app
+description: A French language learning app with spaced repetition, articles, and grammar lessons.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Supabase
+  supabase_flutter: ^2.5.0
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^13.2.1
+
+  # UI
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  lottie: ^3.1.0
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  fl_chart: ^0.68.0              # progress charts
+
+  # Audio
+  just_audio: ^0.9.38
+  audio_session: ^0.1.21
+
+  # Notifications
+  flutter_local_notifications: ^17.1.2
+  firebase_core: ^3.1.0
+  firebase_messaging: ^15.0.4
+
+  # Storage & Preferences
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.3.1
+  hive_flutter: ^1.1.0           # local offline cache
+
+  # Utils
+  intl: ^0.19.0
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+  equatable: ^2.0.5
+  dartz: ^0.10.1                 # functional Either type
+  connectivity_plus: ^6.0.3
+  permission_handler: ^11.3.1
+
+  # Text processing (article word tap)
+  flutter_widget_from_html_core: ^0.14.3
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.9
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  custom_lint: ^0.6.4
+  riverpod_lint: ^2.3.10
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/animations/
+    - assets/images/
+    - assets/audio/
+  fonts:
+    - family: Spectral
+      fonts:
+        - asset: assets/fonts/Spectral-Regular.ttf
+        - asset: assets/fonts/Spectral-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Spectral-Bold.ttf
+          weight: 700
+    # CJK font for 繁體中文 display
+    # Download from: https://fonts.google.com/noto/specimen/Noto+Sans+TC
+    - family: Noto Sans TC
+      fonts:
+        - asset: assets/fonts/NotoSansTC-Regular.ttf
+        - asset: assets/fonts/NotoSansTC-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansTC-Bold.ttf
+          weight: 700

@@ -1,0 +1,256 @@
+name: Build & Release
+
+# 當你推送 v1.0.0 這樣的 tag 時觸發
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 也可以在 GitHub → Actions → 手動觸發
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本號（例如 v1.0.0）'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write   # 需要寫入權限才能建立 Release
+
+jobs:
+  # ── Android APK ─────────────────────────────────────────
+  build-android:
+    name: 🤖 Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Build APK (release)
+        working-directory: flutter_app
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Rename APK
+        run: |
+          VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
+          mv flutter_app/build/app/outputs/flutter-apk/app-release.apk \
+             FrenchMind-${VERSION}-android.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: FrenchMind-*-android.apk
+          retention-days: 7
+
+  # ── Windows EXE ─────────────────────────────────────────
+  build-windows:
+    name: 🪟 Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows
+        working-directory: flutter_app
+        run: |
+          flutter build windows --release `
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} `
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          $VERSION = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "${{ github.event.inputs.version }}" }
+          $src = "flutter_app\build\windows\x64\runner\Release"
+          $zip = "FrenchMind-${VERSION}-windows.zip"
+          Compress-Archive -Path "$src\*" -DestinationPath $zip
+          Write-Output "Created $zip"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: FrenchMind-*-windows.zip
+          retention-days: 7
+
+  # ── macOS DMG ───────────────────────────────────────────
+  build-macos:
+    name: 🍎 Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Enable macOS desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Build macOS
+        working-directory: flutter_app
+        run: |
+          flutter build macos --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Create DMG
+        run: |
+          VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
+          APP_PATH="flutter_app/build/macos/Build/Products/Release/french_learning_app.app"
+          DMG_NAME="FrenchMind-${VERSION}-macos.dmg"
+          hdiutil create -volname "FrenchMind" \
+            -srcfolder "$APP_PATH" \
+            -ov -format UDZO \
+            "$DMG_NAME"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: FrenchMind-*-macos.dmg
+          retention-days: 7
+
+  # ── iOS IPA ─────────────────────────────────────────────
+  build-ios:
+    name: 📱 Build iOS IPA
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Build iOS (no codesign — for sideloading / TestFlight upload)
+        working-directory: flutter_app
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Package IPA (ad-hoc, no signing)
+        run: |
+          VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
+          mkdir -p Payload
+          cp -r flutter_app/build/ios/iphoneos/Runner.app Payload/
+          zip -r "FrenchMind-${VERSION}-ios.ipa" Payload
+          rm -rf Payload
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: FrenchMind-*-ios.ipa
+          retention-days: 7
+
+  # ── Create GitHub Release ────────────────────────────────
+  create-release:
+    name: 🚀 Create GitHub Release
+    needs: [build-android, build-windows, build-macos, build-ios]
+    runs-on: ubuntu-latest
+    # 即使 iOS 失敗也繼續（iOS 需要 Apple Developer 帳號）
+    if: always() && (needs.build-android.result == 'success' || needs.build-windows.result == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-files
+          merge-multiple: true
+
+      - name: List release files
+        run: ls -lh release-files/
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "FrenchMind ${{ steps.version.outputs.version }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## FrenchMind ${{ steps.version.outputs.version }}
+
+            法語學習 App — 支援 20,000 個法文單字 + 繁體中文翻譯
+
+            ### 📥 下載說明
+
+            | 平台 | 檔案 | 說明 |
+            |------|------|------|
+            | 🤖 Android | `FrenchMind-*-android.apk` | 下載後在設定開啟「未知來源安裝」|
+            | 🪟 Windows | `FrenchMind-*-windows.zip` | 解壓縮後執行 `french_learning_app.exe` |
+            | 🍎 macOS | `FrenchMind-*-macos.dmg` | 開啟 DMG 後拖入 Applications |
+            | 📱 iOS | `FrenchMind-*-ios.ipa` | 需使用 AltStore / Sideloadly 安裝 |
+
+            ### 🔧 系統需求
+            - Android 8.0+（API 26）
+            - iOS 14.0+
+            - Windows 10+（64-bit）
+            - macOS 11 Big Sur+
+
+            ### ✨ 版本更新
+            見下方自動產生的 Commit 記錄
+          files: release-files/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

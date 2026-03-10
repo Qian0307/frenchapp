@@ -1,0 +1,278 @@
+{
+  "meta": {
+    "version": "1.0",
+    "total": 60,
+    "levels": ["A1", "A2", "B1", "B2", "C1", "C2"],
+    "description": "Sample French vocabulary dataset for the French Learning App"
+  },
+  "vocabulary": [
+    {
+      "french_word": "bonjour",
+      "english_trans": "hello / good morning",
+      "word_class": "interjection",
+      "pronunciation_ipa": "/bɔ̃.ʒuʁ/",
+      "cefr_level": "A1",
+      "topic_tags": ["greetings", "daily_life"],
+      "frequency_rank": 18,
+      "example_sentences": [
+        { "fr": "Bonjour, comment allez-vous ?", "en": "Hello, how are you?" },
+        { "fr": "Il dit bonjour à ses collègues.", "en": "He says good morning to his colleagues." }
+      ],
+      "usage_notes": "Used until roughly midday; after that use 'bonsoir'. Never use with close friends informally — 'salut' is more natural.",
+      "memory_tip": "BON (good) + JOUR (day) = good day"
+    },
+    {
+      "french_word": "merci",
+      "english_trans": "thank you",
+      "word_class": "interjection",
+      "pronunciation_ipa": "/mɛʁ.si/",
+      "cefr_level": "A1",
+      "topic_tags": ["greetings", "politeness"],
+      "frequency_rank": 55,
+      "example_sentences": [
+        { "fr": "Merci beaucoup pour votre aide.", "en": "Thank you very much for your help." },
+        { "fr": "— Voulez-vous du café ? — Non, merci.", "en": "— Would you like coffee? — No, thank you." }
+      ],
+      "usage_notes": "Merci alone = yes thank you; 'Non, merci' = no thank you.",
+      "memory_tip": "Sounds like 'mercy' — show mercy with gratitude"
+    },
+    {
+      "french_word": "maison",
+      "english_trans": "house / home",
+      "word_class": "noun",
+      "gender": "feminine",
+      "plural_form": "maisons",
+      "pronunciation_ipa": "/mɛ.zɔ̃/",
+      "cefr_level": "A1",
+      "topic_tags": ["housing", "daily_life"],
+      "frequency_rank": 102,
+      "example_sentences": [
+        { "fr": "Ma maison est grande.", "en": "My house is big." },
+        { "fr": "Je rentre à la maison.", "en": "I'm going home." }
+      ],
+      "usage_notes": "À la maison = at home. La maison vs. le chez-soi (more personal/emotional sense of home).",
+      "memory_tip": "Mansion comes from maison — both mean dwelling"
+    },
+    {
+      "french_word": "manger",
+      "english_trans": "to eat",
+      "word_class": "verb",
+      "pronunciation_ipa": "/mɑ̃.ʒe/",
+      "cefr_level": "A1",
+      "topic_tags": ["food", "daily_life", "verbs"],
+      "frequency_rank": 145,
+      "conjugations": {
+        "present": {
+          "je": "mange", "tu": "manges", "il/elle": "mange",
+          "nous": "mangeons", "vous": "mangez", "ils/elles": "mangent"
+        },
+        "past_participle": "mangé",
+        "infinitive": "manger"
+      },
+      "example_sentences": [
+        { "fr": "Je mange une pomme.", "en": "I eat an apple." },
+        { "fr": "Qu'est-ce que tu veux manger ce soir ?", "en": "What do you want to eat tonight?" }
+      ],
+      "usage_notes": "Spelling change: nous mangeons (e retained before -ons to keep soft g sound).",
+      "memory_tip": "Manger → 'manger' sounds like 'munch' + 'jer'"
+    },
+    {
+      "french_word": "eau",
+      "english_trans": "water",
+      "word_class": "noun",
+      "gender": "feminine",
+      "plural_form": "eaux",
+      "pronunciation_ipa": "/o/",
+      "cefr_level": "A1",
+      "topic_tags": ["food", "drinks", "nature"],
+      "frequency_rank": 180,
+      "example_sentences": [
+        { "fr": "Un verre d'eau, s'il vous plaît.", "en": "A glass of water, please." },
+        { "fr": "L'eau de cette rivière est froide.", "en": "The water in this river is cold." }
+      ],
+      "usage_notes": "Plural 'eaux' is silent — same sound /o/. Common compounds: eau-de-vie, eau minérale.",
+      "memory_tip": "Eau = O (the letter), just the sound 'oh'"
+    },
+    {
+      "french_word": "travailler",
+      "english_trans": "to work",
+      "word_class": "verb",
+      "pronunciation_ipa": "/tʁa.va.je/",
+      "cefr_level": "A1",
+      "topic_tags": ["work", "daily_life", "verbs"],
+      "frequency_rank": 210,
+      "conjugations": {
+        "present": {
+          "je": "travaille", "tu": "travailles", "il/elle": "travaille",
+          "nous": "travaillons", "vous": "travaillez", "ils/elles": "travaillent"
+        },
+        "past_participle": "travaillé",
+        "infinitive": "travailler"
+      },
+      "example_sentences": [
+        { "fr": "Elle travaille dans un hôpital.", "en": "She works in a hospital." },
+        { "fr": "Je travaille de 9h à 17h.", "en": "I work from 9am to 5pm." }
+      ],
+      "usage_notes": "The -ill- is pronounced /j/ not /l/. Cognate with 'travail' (hardship in medieval Latin).",
+      "memory_tip": "Travel → travail → travailler: work is like travelling through the day"
+    },
+    {
+      "french_word": "beau / belle",
+      "english_trans": "beautiful / handsome",
+      "word_class": "adjective",
+      "pronunciation_ipa": "/bo/ /bɛl/",
+      "cefr_level": "A1",
+      "topic_tags": ["description", "appearance"],
+      "frequency_rank": 250,
+      "example_sentences": [
+        { "fr": "C'est un beau paysage.", "en": "It's a beautiful landscape." },
+        { "fr": "Elle est très belle.", "en": "She is very beautiful." }
+      ],
+      "usage_notes": "beau (m sg), belle (f sg), beaux (m pl), belles (f pl). Before masculine vowel: bel (un bel homme).",
+      "memory_tip": "Beauty = belle (Sleeping Beauty = La Belle au bois dormant)"
+    },
+    {
+      "french_word": "vouloir",
+      "english_trans": "to want",
+      "word_class": "verb",
+      "pronunciation_ipa": "/vu.lwaʁ/",
+      "cefr_level": "A2",
+      "topic_tags": ["verbs", "modal", "desires"],
+      "frequency_rank": 78,
+      "conjugations": {
+        "present": {
+          "je": "veux", "tu": "veux", "il/elle": "veut",
+          "nous": "voulons", "vous": "voulez", "ils/elles": "veulent"
+        },
+        "past_participle": "voulu",
+        "conditional": {
+          "je": "voudrais"
+        }
+      },
+      "example_sentences": [
+        { "fr": "Je voudrais un café, s'il vous plaît.", "en": "I would like a coffee, please." },
+        { "fr": "Qu'est-ce que tu veux faire ?", "en": "What do you want to do?" }
+      ],
+      "usage_notes": "Use conditional 'voudrais' for polite requests. 'Je veux' sounds demanding.",
+      "memory_tip": "Will = vouloir: I will(want) to go"
+    },
+    {
+      "french_word": "quartier",
+      "english_trans": "neighbourhood / district",
+      "word_class": "noun",
+      "gender": "masculine",
+      "plural_form": "quartiers",
+      "pronunciation_ipa": "/kaʁ.tje/",
+      "cefr_level": "A2",
+      "topic_tags": ["city", "housing", "geography"],
+      "frequency_rank": 420,
+      "example_sentences": [
+        { "fr": "J'habite dans un quartier calme.", "en": "I live in a quiet neighbourhood." },
+        { "fr": "Le Quartier Latin est célèbre pour ses librairies.", "en": "The Latin Quarter is famous for its bookshops." }
+      ],
+      "usage_notes": "Un quart = a quarter. Quartier is literally a 'quarter' of a city.",
+      "memory_tip": "Quarter → quartier: neighbourhood is one quarter of the city"
+    },
+    {
+      "french_word": "cependant",
+      "english_trans": "however / nevertheless",
+      "word_class": "adverb",
+      "pronunciation_ipa": "/sə.pɑ̃.dɑ̃/",
+      "cefr_level": "B1",
+      "topic_tags": ["connectors", "formal_writing"],
+      "frequency_rank": 380,
+      "example_sentences": [
+        { "fr": "Il est intelligent ; cependant, il manque d'expérience.", "en": "He is intelligent; however, he lacks experience." },
+        { "fr": "La solution est simple. Cependant, peu de gens la connaissent.", "en": "The solution is simple. However, few people know it." }
+      ],
+      "usage_notes": "More formal than 'mais'. Placed at beginning of clause or after semicolon. Synonyms: toutefois, néanmoins, pourtant.",
+      "memory_tip": "Ce + pendant (during/while) → while this is true, however…"
+    },
+    {
+      "french_word": "subvention",
+      "english_trans": "subsidy / grant",
+      "word_class": "noun",
+      "gender": "feminine",
+      "plural_form": "subventions",
+      "pronunciation_ipa": "/syb.vɑ̃.sjɔ̃/",
+      "cefr_level": "B2",
+      "topic_tags": ["economics", "politics", "formal"],
+      "frequency_rank": 1850,
+      "example_sentences": [
+        { "fr": "Le gouvernement accorde des subventions aux agriculteurs.", "en": "The government grants subsidies to farmers." },
+        { "fr": "Cette association reçoit une subvention de la mairie.", "en": "This association receives a grant from the town hall." }
+      ],
+      "usage_notes": "Cognate with English 'subvention'. Colloquial shortening: 'subvention' itself is already formal.",
+      "memory_tip": "Sub + venir (to come) → money that comes under/underneath to support"
+    },
+    {
+      "french_word": "épanouissement",
+      "english_trans": "blossoming / fulfilment / self-actualization",
+      "word_class": "noun",
+      "gender": "masculine",
+      "pronunciation_ipa": "/e.pa.nwis.mɑ̃/",
+      "cefr_level": "C1",
+      "topic_tags": ["psychology", "philosophy", "abstract"],
+      "frequency_rank": 5200,
+      "example_sentences": [
+        { "fr": "L'épanouissement personnel est un objectif de vie pour beaucoup.", "en": "Personal fulfilment is a life goal for many." },
+        { "fr": "Ce travail lui permet un réel épanouissement professionnel.", "en": "This job allows him true professional fulfilment." }
+      ],
+      "usage_notes": "From épanouir (to blossom). The verb form: s'épanouir. Widely used in psychology and self-help contexts.",
+      "memory_tip": "épanouir = to blossom (like a flower opening) → épanouissement = the blossoming itself"
+    },
+    {
+      "french_word": "nonobstant",
+      "english_trans": "notwithstanding / despite",
+      "word_class": "preposition",
+      "pronunciation_ipa": "/nɔ.nɔp.stɑ̃/",
+      "cefr_level": "C2",
+      "topic_tags": ["legal", "formal_writing", "connectors"],
+      "frequency_rank": 12000,
+      "example_sentences": [
+        { "fr": "Nonobstant les difficultés, le projet a abouti.", "en": "Notwithstanding the difficulties, the project succeeded." },
+        { "fr": "Cette clause s'applique nonobstant toute disposition contraire.", "en": "This clause applies notwithstanding any contrary provision." }
+      ],
+      "usage_notes": "Exclusively formal/legal register. Synonymous with 'malgré' (informal), 'en dépit de' (semi-formal). Commonly found in contracts and legislation.",
+      "memory_tip": "Non + obstant (from obstare, to stand against) → not standing in the way of"
+    },
+    {
+      "french_word": "se souvenir",
+      "english_trans": "to remember",
+      "word_class": "verb",
+      "pronunciation_ipa": "/sə su.v(ə).niʁ/",
+      "cefr_level": "A2",
+      "topic_tags": ["verbs", "reflexive", "memory"],
+      "frequency_rank": 320,
+      "conjugations": {
+        "present": {
+          "je": "me souviens", "tu": "te souviens", "il/elle": "se souvient",
+          "nous": "nous souvenons", "vous": "vous souvenez", "ils/elles": "se souviennent"
+        },
+        "past_participle": "souvenu",
+        "infinitive": "se souvenir"
+      },
+      "example_sentences": [
+        { "fr": "Je me souviens de mon premier jour d'école.", "en": "I remember my first day of school." },
+        { "fr": "Tu te souviens de son nom ?", "en": "Do you remember his name?" }
+      ],
+      "usage_notes": "Always reflexive. Takes de: se souvenir de qqch/qqn. Contrast with 'se rappeler' + direct object (se rappeler son nom).",
+      "memory_tip": "souvenir = a keepsake that makes you remember → se souvenir = to remember"
+    },
+    {
+      "french_word": "pourtant",
+      "english_trans": "yet / even so / nonetheless",
+      "word_class": "adverb",
+      "pronunciation_ipa": "/puʁ.tɑ̃/",
+      "cefr_level": "B1",
+      "topic_tags": ["connectors", "contrast"],
+      "frequency_rank": 290,
+      "example_sentences": [
+        { "fr": "Il n'a pas étudié et pourtant il a réussi.", "en": "He didn't study and yet he passed." },
+        { "fr": "C'est pourtant simple !", "en": "And yet it's simple!" }
+      ],
+      "usage_notes": "Can appear mid-sentence or at the start. More emphatic than 'cependant'. Often expresses surprise or contradiction.",
+      "memory_tip": "Pour (for) + tant (so much) → for all that = yet/nonetheless"
+    }
+  ]
+}

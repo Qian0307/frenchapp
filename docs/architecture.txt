@@ -1,0 +1,238 @@
+======================================================================
+  FRENCH LEARNING APP — COMPLETE ARCHITECTURE REFERENCE
+======================================================================
+
+1. SYSTEM OVERVIEW
+──────────────────
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                     Flutter App                         │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
+  │  │Dashboard │  │Flashcards│  │ Articles │  │Grammar │ │
+  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───┬────┘ │
+  │       │              │             │              │       │
+  │  ┌────▼──────────────▼─────────────▼──────────────▼───┐ │
+  │  │            Riverpod Providers + Repositories        │ │
+  │  └──────────────────────────┬──────────────────────────┘ │
+  └─────────────────────────────┼──────────────────────────┘
+                                │ HTTPS / JWT
+  ┌─────────────────────────────▼──────────────────────────┐
+  │                    Supabase Platform                    │
+  │                                                         │
+  │  ┌──────────┐  ┌────────────────────────────────────┐  │
+  │  │ Auth     │  │    PostgreSQL Database (RLS)        │  │
+  │  │ (PKCE)   │  │                                    │  │
+  │  └──────────┘  │  vocabulary          (public read) │  │
+  │                │  profiles            (own row)      │  │
+  │  ┌──────────┐  │  user_vocab_progress (own row)      │  │
+  │  │ Storage  │  │  review_sessions     (own row)      │  │
+  │  │ (audio)  │  │  review_events       (own row)      │  │
+  │  └──────────┘  │  mistake_book        (own row)      │  │
+  │                │  articles            (public read)  │  │
+  │  ┌──────────┐  │  grammar_lessons     (public read)  │  │
+  │  │ Realtime │  │  grammar_exercises   (public read)  │  │
+  │  │(presence)│  │  user_grammar_prog   (own row)      │  │
+  │  └──────────┘  │  daily_articles      (public read)  │  │
+  │                │  push_tokens         (own row)      │  │
+  │  ┌───────────────────────────────────────────────┐   │  │
+  │  │              Edge Functions (Deno)            │   │  │
+  │  │  /flashcards  /articles  /grammar             │   │  │
+  │  │  /mistake-book  /notifications                │   │  │
+  │  └───────────────────────────────────────────────┘   │  │
+  │                                                         │
+  └─────────────────────────────────────────────────────────┘
+                                │
+              ┌─────────────────▼──────────────────┐
+              │         External Services           │
+              │  FCM / APNs (push notifications)    │
+              │  Expo Push (token routing)          │
+              │  CDN (audio files, images)          │
+              └─────────────────────────────────────┘
+
+
+2. FLUTTER APP STRUCTURE (feature-first)
+──────────────────────────────────────────
+
+  lib/
+  ├── main.dart                         Entry point
+  ├── core/
+  │   ├── constants/app_constants.dart  Global constants
+  │   ├── theme/app_theme.dart          Material 3 theme (light+dark)
+  │   ├── router/app_router.dart        GoRouter with auth guard
+  │   ├── shell/main_shell.dart         Bottom navigation shell
+  │   └── services/
+  │       └── notification_service.dart FCM + local notifications
+  │
+  ├── features/
+  │   ├── auth/                         Sign-in, register
+  │   ├── dashboard/                    Home screen with stats
+  │   ├── flashcards/
+  │   │   ├── data/models/             VocabularyModel, UserVocabProgress
+  │   │   ├── data/repositories/       FlashcardRepository (edge fn calls)
+  │   │   └── presentation/
+  │   │       ├── pages/               FlashcardSessionPage, VocabBrowserPage
+  │   │       └── widgets/             FlashcardWidget (3D flip), QualityBar
+  │   ├── articles/
+  │   │   ├── data/                    ArticleModel, ArticleRepository
+  │   │   └── presentation/
+  │   │       ├── pages/               ArticleListPage, ArticleReaderPage
+  │   │       └── widgets/             AnnotatedArticleBody, VocabularyPopup
+  │   ├── grammar/
+  │   │   ├── data/                    GrammarLesson, GrammarRepository
+  │   │   └── presentation/
+  │   │       ├── pages/               GrammarListPage, GrammarLessonPage
+  │   │       └── widgets/             ExerciseWidget (multi-type)
+  │   └── mistake_book/
+  │       └── presentation/pages/     MistakeBookPage
+  │
+  └── shared/
+      ├── providers/supabase_provider.dart  Auth state, Supabase client
+      └── widgets/                          Common reusable widgets
+
+
+3. BACKEND API ENDPOINTS
+──────────────────────────
+
+  All endpoints are Supabase Edge Functions (Deno/TypeScript).
+  Auth: Bearer JWT in Authorization header.
+
+  ── Flashcards (/flashcards/*) ─────────────────────────────
+  GET  /flashcards/due?limit=20&type=scheduled   Due cards for today
+  GET  /flashcards/browse?level=A1&q=bonjour     Browse vocabulary
+  POST /flashcards/start                          Start review session
+  POST /flashcards/review                         Submit card grade (SM-2)
+  POST /flashcards/end                            End session, award XP
+  POST /flashcards/enroll                         Add card to user deck
+
+  ── Articles (/articles/*) ─────────────────────────────────
+  GET  /articles/daily                            Today's article for user level
+  GET  /articles/list?level=A2&page=1             Paginated article list
+  GET  /articles/:id                              Full article + linked vocab
+  POST /articles/:id/start                        Mark reading started
+  PATCH /articles/:id/progress                    Update progress %
+  POST /articles/:id/vocabulary/:vid/lookup       Tap on vocab word
+
+  ── Grammar (/grammar/*) ───────────────────────────────────
+  GET  /grammar/lessons?level=B1                  Lesson list with progress
+  GET  /grammar/lessons/:id                       Lesson + exercises
+  POST /grammar/exercises/:id/attempt             Submit exercise answer
+  POST /grammar/lessons/:id/complete              Complete lesson, update level
+
+  ── Mistake Book (/mistake-book/*) ─────────────────────────
+  GET  /mistake-book?resolved=false               List mistakes
+  PATCH /mistake-book/:vid/note                   Add personal note
+  PATCH /mistake-book/:vid/resolve                Mark resolved
+  GET  /mistake-book/review-cards                 Batch for review session
+  DELETE /mistake-book/:vid                       Remove entry
+
+  ── Notifications (/notifications/*) ───────────────────────
+  POST  /notifications/dispatch   [cron, service role]  Send scheduled notifs
+  POST  /notifications/token                             Register push token
+  DELETE /notifications/token                            Deregister token
+  GET   /notifications/preferences                       Get prefs
+  PUT   /notifications/preferences                       Update prefs
+  GET   /notifications/history                           Recent 50
+  PATCH /notifications/:id/open                          Mark opened
+
+
+4. SM-2 SPACED REPETITION ALGORITHM
+──────────────────────────────────────
+
+  Grade mapping (user-facing → numeric):
+    again = 0   →  reset to day 1, EF -= 0.20
+    hard  = 1   →  interval × 1.2, EF -= 0.15
+    good  = 2   →  SM-2 normal, EF += small bonus
+    easy  = 3   →  SM-2 normal with bigger EF boost
+
+  Interval schedule:
+    rep 0 (first review)  → I = 1 day
+    rep 1 (second review) → I = 6 days
+    rep 2+                → I = prev_I × EF
+
+  EF update formula (SM-2):
+    EF' = EF + 0.1 - (3-q)*(0.08 + (3-q)*0.02)
+    Minimum EF: 1.3
+    Maximum interval: 365 days
+
+  Fuzz factor: ±5% random noise to spread reviews across days.
+
+  Forgetting curve (used for review ordering):
+    R = e^(-t / EF)   where t = days since last review
+    Cards with lowest R are shown first in session.
+
+
+5. DATABASE SCHEMA SUMMARY
+────────────────────────────
+
+  Core tables:
+    profiles                — user settings, streak, XP, level
+    vocabulary              — 1 row per French word (public)
+    user_vocabulary_progress— SM-2 state per user per word
+    review_sessions         — session containers (start/end)
+    review_events           — individual card grade events
+    mistake_book            — persistent wrong-answer log
+    achievements            — badge definitions (public)
+    user_achievements       — earned badges
+
+  Content tables:
+    articles                — annotated articles (public)
+    article_vocabulary      — article ↔ vocab links
+    user_article_reads      — progress per user per article
+    daily_articles          — schedule: date × level → article
+    grammar_lessons         — lesson content (public)
+    grammar_exercises       — exercise items (public)
+    user_grammar_progress   — completion per user per lesson
+    user_exercise_attempts  — answer history
+
+  Notification tables:
+    push_tokens             — FCM/APNs tokens per user
+    notification_log        — sent notification history
+    notification_preferences— per-user notification settings
+
+  Row-Level Security:
+    • All user-specific tables: policies ensure users only
+      see and modify their own rows (auth.uid() = user_id).
+    • Content tables (vocabulary, articles, grammar, achievements):
+      public SELECT, no INSERT/UPDATE from clients.
+    • Edge functions use service role key only for /notifications/dispatch.
+
+6. NOTIFICATION FLOW
+──────────────────────
+
+  1. User opens app → NotificationService.initialize()
+     → requests FCM/APNs token → POST /notifications/token
+
+  2. Supabase pg_cron job fires every hour:
+     SELECT * FROM v_daily_review_due WHERE notification_hour = current_hour
+     → POST /notifications/dispatch (with CRON_SECRET header)
+
+  3. Edge function queries due cards, builds message, calls Expo Push API
+     → phone receives push → user taps → deep link to /flashcards/session
+
+  4. Local fallback (no FCM): flutter_local_notifications schedules
+     a periodic daily notification at user's chosen hour.
+
+7. OFFLINE SUPPORT
+───────────────────
+
+  Hive boxes:
+    vocab_cache   — last 200 browsed vocabulary items
+    article_cache — last 5 full articles (body_annotated JSON)
+
+  Connectivity check via connectivity_plus:
+    • If offline: serve cached flashcards from Hive
+    • Queue review_events locally, flush on reconnect
+    • Articles load from cache when offline
+
+8. CEFR LEVEL PROGRESSION
+───────────────────────────
+
+  Trigger: recalculate_user_level() runs after lesson completion.
+
+  Logic:
+    For each CEFR level, count published lessons.
+    If user has completed ≥ 80% of lessons at level X,
+    and X > current_level → upgrade current_level to X.
+
+  Visual: level badge on dashboard, coloured with CEFR palette.
+  Also reflected in: article recommendations, daily vocabulary selection.
