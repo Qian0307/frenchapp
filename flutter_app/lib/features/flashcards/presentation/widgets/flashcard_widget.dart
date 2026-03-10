@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../data/models/vocabulary_model.dart';
@@ -204,7 +205,7 @@ class _BackFace extends StatelessWidget {
                 child: Text(
                   zhTw,
                   style: theme.textTheme.displayMedium!.copyWith(
-                    fontFamily: 'Noto Sans TC',  // CJK font
+                    fontFamily: GoogleFonts.notoSansTc().fontFamily,
                     fontSize: 28,
                     height: 1.4,
                   ),
