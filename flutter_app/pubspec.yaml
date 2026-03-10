@@ -32,8 +32,8 @@ dependencies:
   just_audio: ^0.9.38
   audio_session: ^0.1.21
 
-  # Notifications (Firebase removed — add back when push notifications needed)
-  flutter_local_notifications: ^17.1.2
+  # flutter_local_notifications removed — causes dllhost.exe COM crash on Windows
+  # Add back with proper platform configuration when push notifications are needed
 
   # Storage & Preferences
   flutter_secure_storage: ^9.0.0
