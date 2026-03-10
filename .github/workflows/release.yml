@@ -41,13 +41,12 @@ jobs:
         run: flutter create --platforms=android . --project-name french_learning_app
 
       - name: Download fonts
-        working-directory: flutter_app/assets/fonts
         run: |
-          # Spectral
+          mkdir -p flutter_app/assets/fonts
+          cd flutter_app/assets/fonts
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf" -o Spectral-Regular.ttf
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"  -o Spectral-Italic.ttf
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"    -o Spectral-Bold.ttf
-          # Noto Sans TC (subset — Medium weight only to keep size down)
           curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Regular.otf" -o NotoSansTC-Regular.ttf
           curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Medium.otf" -o NotoSansTC-Medium.ttf
           curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Bold.otf"   -o NotoSansTC-Bold.ttf
@@ -99,18 +98,19 @@ jobs:
 
       - name: Download fonts
         shell: pwsh
-        working-directory: flutter_app/assets/fonts
         run: |
+          New-Item -ItemType Directory -Force -Path "flutter_app\assets\fonts" | Out-Null
+          $dir = "flutter_app\assets\fonts"
           $fonts = @{
-            "Spectral-Regular.ttf" = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf"
-            "Spectral-Italic.ttf"  = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"
-            "Spectral-Bold.ttf"    = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"
+            "Spectral-Regular.ttf"   = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf"
+            "Spectral-Italic.ttf"    = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"
+            "Spectral-Bold.ttf"      = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"
             "NotoSansTC-Regular.ttf" = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Regular.otf"
             "NotoSansTC-Medium.ttf"  = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Medium.otf"
             "NotoSansTC-Bold.ttf"    = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Bold.otf"
           }
           foreach ($name in $fonts.Keys) {
-            Invoke-WebRequest -Uri $fonts[$name] -OutFile $name
+            Invoke-WebRequest -Uri $fonts[$name] -OutFile "$dir\$name"
             Write-Output "Downloaded $name"
           }
 
@@ -168,8 +168,9 @@ jobs:
           grep "platform :osx" Podfile
 
       - name: Download fonts
-        working-directory: flutter_app/assets/fonts
         run: |
+          mkdir -p flutter_app/assets/fonts
+          cd flutter_app/assets/fonts
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf" -o Spectral-Regular.ttf
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"  -o Spectral-Italic.ttf
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"    -o Spectral-Bold.ttf
@@ -234,8 +235,9 @@ jobs:
           grep "platform :ios" Podfile
 
       - name: Download fonts
-        working-directory: flutter_app/assets/fonts
         run: |
+          mkdir -p flutter_app/assets/fonts
+          cd flutter_app/assets/fonts
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf" -o Spectral-Regular.ttf
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"  -o Spectral-Italic.ttf
           curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"    -o Spectral-Bold.ttf
