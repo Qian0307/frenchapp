@@ -130,6 +130,14 @@ jobs:
         working-directory: flutter_app
         run: flutter create --platforms=macos . --project-name french_learning_app
 
+      - name: Set macOS deployment target to 10.15 (required by firebase_core)
+        working-directory: flutter_app/macos
+        run: |
+          sed -i '' "s/platform :osx, '10.14'/platform :osx, '10.15'/" Podfile
+          sed -i '' "s/platform :osx, '10.11'/platform :osx, '10.15'/" Podfile
+          sed -i '' "s/MACOSX_DEPLOYMENT_TARGET = 10.14/MACOSX_DEPLOYMENT_TARGET = 10.15/" Runner.xcodeproj/project.pbxproj
+          grep "platform :osx" Podfile
+
       - name: Install dependencies
         working-directory: flutter_app
         run: flutter pub get
@@ -175,6 +183,15 @@ jobs:
       - name: Add iOS platform
         working-directory: flutter_app
         run: flutter create --platforms=ios . --project-name french_learning_app
+
+      - name: Set iOS deployment target to 13.0 (required by firebase_core)
+        working-directory: flutter_app/ios
+        run: |
+          sed -i '' "s/platform :ios, '12.0'/platform :ios, '13.0'/" Podfile
+          sed -i '' "s/platform :ios, '11.0'/platform :ios, '13.0'/" Podfile
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 12.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/" Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 11.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/" Runner.xcodeproj/project.pbxproj
+          grep "platform :ios" Podfile
 
       - name: Install dependencies
         working-directory: flutter_app
