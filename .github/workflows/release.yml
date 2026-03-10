@@ -1,12 +1,9 @@
 name: Build & Release
 
-# 當你推送 v1.0.0 這樣的 tag 時觸發
 on:
   push:
     tags:
       - 'v*'
-
-# 也可以在 GitHub → Actions → 手動觸發
   workflow_dispatch:
     inputs:
       version:
@@ -15,7 +12,7 @@ on:
         default: 'v1.0.0'
 
 permissions:
-  contents: write   # 需要寫入權限才能建立 Release
+  contents: write
 
 jobs:
   # ── Android APK ─────────────────────────────────────────
@@ -43,7 +40,11 @@ jobs:
         working-directory: flutter_app
         run: flutter pub get
 
-      - name: Build APK (release)
+      - name: Add Android platform
+        working-directory: flutter_app
+        run: flutter create --platforms=android . --project-name french_learning_app
+
+      - name: Build APK
         working-directory: flutter_app
         run: |
           flutter build apk --release \
@@ -56,14 +57,14 @@ jobs:
           mv flutter_app/build/app/outputs/flutter-apk/app-release.apk \
              FrenchMind-${VERSION}-android.apk
 
-      - name: Upload APK artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: FrenchMind-*-android.apk
           retention-days: 7
 
-  # ── Windows EXE ─────────────────────────────────────────
+  # ── Windows ─────────────────────────────────────────────
   build-windows:
     name: 🪟 Build Windows
     runs-on: windows-latest
@@ -82,8 +83,9 @@ jobs:
         working-directory: flutter_app
         run: flutter pub get
 
-      - name: Enable Windows desktop
-        run: flutter config --enable-windows-desktop
+      - name: Add Windows platform
+        working-directory: flutter_app
+        run: flutter create --platforms=windows . --project-name french_learning_app
 
       - name: Build Windows
         working-directory: flutter_app
@@ -92,23 +94,21 @@ jobs:
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} `
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
-      - name: Package Windows build
+      - name: Package ZIP
         shell: pwsh
         run: |
           $VERSION = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "${{ github.event.inputs.version }}" }
           $src = "flutter_app\build\windows\x64\runner\Release"
-          $zip = "FrenchMind-${VERSION}-windows.zip"
-          Compress-Archive -Path "$src\*" -DestinationPath $zip
-          Write-Output "Created $zip"
+          Compress-Archive -Path "$src\*" -DestinationPath "FrenchMind-${VERSION}-windows.zip"
 
-      - name: Upload Windows artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-zip
           path: FrenchMind-*-windows.zip
           retention-days: 7
 
-  # ── macOS DMG ───────────────────────────────────────────
+  # ── macOS ────────────────────────────────────────────────
   build-macos:
     name: 🍎 Build macOS
     runs-on: macos-latest
@@ -127,8 +127,9 @@ jobs:
         working-directory: flutter_app
         run: flutter pub get
 
-      - name: Enable macOS desktop
-        run: flutter config --enable-macos-desktop
+      - name: Add macOS platform
+        working-directory: flutter_app
+        run: flutter create --platforms=macos . --project-name french_learning_app
 
       - name: Build macOS
         working-directory: flutter_app
@@ -140,21 +141,19 @@ jobs:
       - name: Create DMG
         run: |
           VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
-          APP_PATH="flutter_app/build/macos/Build/Products/Release/french_learning_app.app"
-          DMG_NAME="FrenchMind-${VERSION}-macos.dmg"
+          APP="flutter_app/build/macos/Build/Products/Release/french_learning_app.app"
           hdiutil create -volname "FrenchMind" \
-            -srcfolder "$APP_PATH" \
-            -ov -format UDZO \
-            "$DMG_NAME"
+            -srcfolder "$APP" -ov -format UDZO \
+            "FrenchMind-${VERSION}-macos.dmg"
 
-      - name: Upload macOS artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
           path: FrenchMind-*-macos.dmg
           retention-days: 7
 
-  # ── iOS IPA ─────────────────────────────────────────────
+  # ── iOS IPA ──────────────────────────────────────────────
   build-ios:
     name: 📱 Build iOS IPA
     runs-on: macos-latest
@@ -173,14 +172,18 @@ jobs:
         working-directory: flutter_app
         run: flutter pub get
 
-      - name: Build iOS (no codesign — for sideloading / TestFlight upload)
+      - name: Add iOS platform
+        working-directory: flutter_app
+        run: flutter create --platforms=ios . --project-name french_learning_app
+
+      - name: Build iOS (no codesign)
         working-directory: flutter_app
         run: |
           flutter build ios --release --no-codesign \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
-      - name: Package IPA (ad-hoc, no signing)
+      - name: Package IPA
         run: |
           VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
           mkdir -p Payload
@@ -188,7 +191,7 @@ jobs:
           zip -r "FrenchMind-${VERSION}-ios.ipa" Payload
           rm -rf Payload
 
-      - name: Upload iOS artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
@@ -200,7 +203,6 @@ jobs:
     name: 🚀 Create GitHub Release
     needs: [build-android, build-windows, build-macos, build-ios]
     runs-on: ubuntu-latest
-    # 即使 iOS 失敗也繼續（iOS 需要 Apple Developer 帳號）
     if: always() && (needs.build-android.result == 'success' || needs.build-windows.result == 'success')
     steps:
       - name: Checkout
@@ -212,16 +214,13 @@ jobs:
           path: release-files
           merge-multiple: true
 
-      - name: List release files
-        run: ls -lh release-files/
-
       - name: Get version
         id: version
         run: |
           VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create Release & Upload Assets
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
@@ -248,9 +247,6 @@ jobs:
             - iOS 14.0+
             - Windows 10+（64-bit）
             - macOS 11 Big Sur+
-
-            ### ✨ 版本更新
-            見下方自動產生的 Commit 記錄
           files: release-files/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
