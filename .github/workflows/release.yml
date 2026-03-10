@@ -14,7 +14,6 @@ on:
 permissions:
   contents: write
 
-# ── 共用設定 ─────────────────────────────────────────────────
 env:
   FLUTTER_VERSION: '3.22.0'
 
@@ -40,6 +39,19 @@ jobs:
       - name: Add Android platform
         working-directory: flutter_app
         run: flutter create --platforms=android . --project-name french_learning_app
+
+      - name: Download fonts
+        working-directory: flutter_app/assets/fonts
+        run: |
+          # Spectral
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf" -o Spectral-Regular.ttf
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"  -o Spectral-Italic.ttf
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"    -o Spectral-Bold.ttf
+          # Noto Sans TC (subset — Medium weight only to keep size down)
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Regular.otf" -o NotoSansTC-Regular.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Medium.otf" -o NotoSansTC-Medium.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Bold.otf"   -o NotoSansTC-Bold.ttf
+          ls -lh
 
       - name: Install dependencies
         working-directory: flutter_app
@@ -84,6 +96,23 @@ jobs:
       - name: Add Windows platform
         working-directory: flutter_app
         run: flutter create --platforms=windows . --project-name french_learning_app
+
+      - name: Download fonts
+        shell: pwsh
+        working-directory: flutter_app/assets/fonts
+        run: |
+          $fonts = @{
+            "Spectral-Regular.ttf" = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf"
+            "Spectral-Italic.ttf"  = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"
+            "Spectral-Bold.ttf"    = "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"
+            "NotoSansTC-Regular.ttf" = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Regular.otf"
+            "NotoSansTC-Medium.ttf"  = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Medium.otf"
+            "NotoSansTC-Bold.ttf"    = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Bold.otf"
+          }
+          foreach ($name in $fonts.Keys) {
+            Invoke-WebRequest -Uri $fonts[$name] -OutFile $name
+            Write-Output "Downloaded $name"
+          }
 
       - name: Install dependencies
         working-directory: flutter_app
@@ -130,13 +159,24 @@ jobs:
         working-directory: flutter_app
         run: flutter create --platforms=macos . --project-name french_learning_app
 
-      - name: Set macOS deployment target to 10.15 (required by firebase_core)
+      - name: Set macOS deployment target to 10.15
         working-directory: flutter_app/macos
         run: |
           sed -i '' "s/platform :osx, '10.14'/platform :osx, '10.15'/" Podfile
           sed -i '' "s/platform :osx, '10.11'/platform :osx, '10.15'/" Podfile
-          sed -i '' "s/MACOSX_DEPLOYMENT_TARGET = 10.14/MACOSX_DEPLOYMENT_TARGET = 10.15/" Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/MACOSX_DEPLOYMENT_TARGET = 10.14/MACOSX_DEPLOYMENT_TARGET = 10.15/g" Runner.xcodeproj/project.pbxproj
           grep "platform :osx" Podfile
+
+      - name: Download fonts
+        working-directory: flutter_app/assets/fonts
+        run: |
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf" -o Spectral-Regular.ttf
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"  -o Spectral-Italic.ttf
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"    -o Spectral-Bold.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Regular.otf" -o NotoSansTC-Regular.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Medium.otf" -o NotoSansTC-Medium.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Bold.otf"   -o NotoSansTC-Bold.ttf
+          ls -lh
 
       - name: Install dependencies
         working-directory: flutter_app
@@ -184,14 +224,25 @@ jobs:
         working-directory: flutter_app
         run: flutter create --platforms=ios . --project-name french_learning_app
 
-      - name: Set iOS deployment target to 13.0 (required by firebase_core)
+      - name: Set iOS deployment target to 13.0
         working-directory: flutter_app/ios
         run: |
           sed -i '' "s/platform :ios, '12.0'/platform :ios, '13.0'/" Podfile
           sed -i '' "s/platform :ios, '11.0'/platform :ios, '13.0'/" Podfile
-          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 12.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/" Runner.xcodeproj/project.pbxproj
-          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 11.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/" Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 12.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g" Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 11.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g" Runner.xcodeproj/project.pbxproj
           grep "platform :ios" Podfile
+
+      - name: Download fonts
+        working-directory: flutter_app/assets/fonts
+        run: |
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Regular.ttf" -o Spectral-Regular.ttf
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Italic.ttf"  -o Spectral-Italic.ttf
+          curl -sL "https://github.com/googlefonts/spectral/raw/main/fonts/ttf/Spectral-Bold.ttf"    -o Spectral-Bold.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Regular.otf" -o NotoSansTC-Regular.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Medium.otf" -o NotoSansTC-Medium.ttf
+          curl -sL "https://github.com/googlefonts/noto-cjk/raw/main/Sans/SubsetOTF/TC/NotoSansCJKtc-Bold.otf"   -o NotoSansTC-Bold.ttf
+          ls -lh
 
       - name: Install dependencies
         working-directory: flutter_app
