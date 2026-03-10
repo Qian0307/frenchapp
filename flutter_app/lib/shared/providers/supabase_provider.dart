@@ -5,25 +5,25 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 part 'supabase_provider.g.dart';
 
 @riverpod
-SupabaseClient supabaseClient(Ref ref) {
+SupabaseClient supabaseClient(SupabaseClientRef ref) {
   return Supabase.instance.client;
 }
 
 @riverpod
-Stream<AuthState> authState(Ref ref) {
+Stream<AuthState> authState(AuthStateRef ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
 }
 
 /// Current user session — null when signed out.
 @riverpod
-Session? currentSession(Ref ref) {
+Session? currentSession(CurrentSessionRef ref) {
   final authStream = ref.watch(authStateProvider);
   return authStream.valueOrNull?.session;
 }
 
 /// Current user ID (throws if not signed in).
 @riverpod
-String currentUserId(Ref ref) {
+String currentUserId(CurrentUserIdRef ref) {
   final session = ref.watch(currentSessionProvider);
   if (session == null) throw Exception('Not authenticated');
   return session.user.id;

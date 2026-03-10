@@ -6,7 +6,7 @@ import '../models/vocabulary_model.dart';
 part 'flashcard_repository.g.dart';
 
 @riverpod
-FlashcardRepository flashcardRepository(Ref ref) {
+FlashcardRepository flashcardRepository(FlashcardRepositoryRef ref) {
   return FlashcardRepository(Supabase.instance.client);
 }
 

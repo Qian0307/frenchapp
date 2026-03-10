@@ -19,7 +19,7 @@ import '../shell/main_shell.dart';
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter appRouter(Ref ref) {
+GoRouter appRouter(AppRouterRef ref) {
   return GoRouter(
     initialLocation: '/dashboard',
     redirect: (context, state) {

@@ -14,35 +14,40 @@ on:
 permissions:
   contents: write
 
+# ── 共用設定 ─────────────────────────────────────────────────
+env:
+  FLUTTER_VERSION: '3.22.0'
+
 jobs:
-  # ── Android APK ─────────────────────────────────────────
+  # ── Android APK ─────────────────────────────────────────────
   build-android:
     name: 🤖 Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
-      - name: Get dependencies
-        working-directory: flutter_app
-        run: flutter pub get
 
       - name: Add Android platform
         working-directory: flutter_app
         run: flutter create --platforms=android . --project-name french_learning_app
+
+      - name: Install dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Generate code (build_runner)
+        working-directory: flutter_app
+        run: flutter pub run build_runner build --delete-conflicting-outputs
 
       - name: Build APK
         working-directory: flutter_app
@@ -57,35 +62,36 @@ jobs:
           mv flutter_app/build/app/outputs/flutter-apk/app-release.apk \
              FrenchMind-${VERSION}-android.apk
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: FrenchMind-*-android.apk
           retention-days: 7
 
-  # ── Windows ─────────────────────────────────────────────
+  # ── Windows ──────────────────────────────────────────────────
   build-windows:
     name: 🪟 Build Windows
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
-      - name: Get dependencies
-        working-directory: flutter_app
-        run: flutter pub get
 
       - name: Add Windows platform
         working-directory: flutter_app
         run: flutter create --platforms=windows . --project-name french_learning_app
+
+      - name: Install dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Generate code (build_runner)
+        working-directory: flutter_app
+        run: flutter pub run build_runner build --delete-conflicting-outputs
 
       - name: Build Windows
         working-directory: flutter_app
@@ -101,35 +107,36 @@ jobs:
           $src = "flutter_app\build\windows\x64\runner\Release"
           Compress-Archive -Path "$src\*" -DestinationPath "FrenchMind-${VERSION}-windows.zip"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: windows-zip
           path: FrenchMind-*-windows.zip
           retention-days: 7
 
-  # ── macOS ────────────────────────────────────────────────
+  # ── macOS ────────────────────────────────────────────────────
   build-macos:
     name: 🍎 Build macOS
     runs-on: macos-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
-      - name: Get dependencies
-        working-directory: flutter_app
-        run: flutter pub get
 
       - name: Add macOS platform
         working-directory: flutter_app
         run: flutter create --platforms=macos . --project-name french_learning_app
+
+      - name: Install dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Generate code (build_runner)
+        working-directory: flutter_app
+        run: flutter pub run build_runner build --delete-conflicting-outputs
 
       - name: Build macOS
         working-directory: flutter_app
@@ -146,35 +153,36 @@ jobs:
             -srcfolder "$APP" -ov -format UDZO \
             "FrenchMind-${VERSION}-macos.dmg"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
           path: FrenchMind-*-macos.dmg
           retention-days: 7
 
-  # ── iOS IPA ──────────────────────────────────────────────
+  # ── iOS IPA ──────────────────────────────────────────────────
   build-ios:
     name: 📱 Build iOS IPA
     runs-on: macos-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
-      - name: Get dependencies
-        working-directory: flutter_app
-        run: flutter pub get
 
       - name: Add iOS platform
         working-directory: flutter_app
         run: flutter create --platforms=ios . --project-name french_learning_app
+
+      - name: Install dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Generate code (build_runner)
+        working-directory: flutter_app
+        run: flutter pub run build_runner build --delete-conflicting-outputs
 
       - name: Build iOS (no codesign)
         working-directory: flutter_app
@@ -191,25 +199,22 @@ jobs:
           zip -r "FrenchMind-${VERSION}-ios.ipa" Payload
           rm -rf Payload
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: FrenchMind-*-ios.ipa
           retention-days: 7
 
-  # ── Create GitHub Release ────────────────────────────────
+  # ── Create GitHub Release ────────────────────────────────────
   create-release:
     name: 🚀 Create GitHub Release
     needs: [build-android, build-windows, build-macos, build-ios]
     runs-on: ubuntu-latest
     if: always() && (needs.build-android.result == 'success' || needs.build-windows.result == 'success')
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: release-files
           merge-multiple: true
@@ -220,8 +225,7 @@ jobs:
           VERSION=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: "FrenchMind ${{ steps.version.outputs.version }}"
