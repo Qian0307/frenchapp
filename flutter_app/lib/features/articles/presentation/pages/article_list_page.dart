@@ -4,18 +4,20 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/models/article_model.dart';
+import '../../data/repositories/article_repository.dart';
 
 class ArticleListPage extends ConsumerStatefulWidget {
   const ArticleListPage({super.key});
-
   @override
   ConsumerState<ArticleListPage> createState() => _ArticleListPageState();
 }
 
 class _ArticleListPageState extends ConsumerState<ArticleListPage> {
   String? _filterLevel;
-  bool    _isLoading  = false;
-  final List<Map<String, dynamic>> _articles = [];
+  bool    _isLoading = false;
+  String? _error;
+  List<ArticleModel> _articles = [];
 
   @override
   void initState() {
@@ -24,20 +26,26 @@ class _ArticleListPageState extends ConsumerState<ArticleListPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
-    // TODO: ArticleRepository.listArticles(level: _filterLevel)
-    await Future.delayed(const Duration(milliseconds: 400));
-    setState(() => _isLoading = false);
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final repo = ref.read(articleRepositoryProvider);
+      final results = await repo.listArticles(level: _filterLevel);
+      setState(() => _articles = results);
+    } catch (e) {
+      setState(() => _error = '載入失敗，請稍後再試');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Articles'),
+        title: const Text('閱讀文章'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: _LevelFilterBar(
+          preferredSize: const Size.fromHeight(52),
+          child: _LevelFilter(
             selected: _filterLevel,
             onSelect: (level) {
               setState(() => _filterLevel = level == _filterLevel ? null : level);
@@ -48,51 +56,87 @@ class _ArticleListPageState extends ConsumerState<ArticleListPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _articles.isEmpty
-              ? const Center(child: Text('No articles available.'))
-              : ListView.separated(
-                  padding:           const EdgeInsets.all(16),
-                  itemCount:         _articles.length,
-                  separatorBuilder:  (_, __) => const SizedBox(height: 10),
-                  itemBuilder:       (context, i) => _ArticleTile(
-                    article: _articles[i],
-                    onTap:   () => context.push('/articles/${_articles[i]['id']}'),
-                  ),
-                ),
+          : _error != null
+              ? _ErrorState(message: _error!, onRetry: _load)
+              : _articles.isEmpty
+                  ? const _EmptyState()
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                        itemCount: _articles.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) => _ArticleTile(
+                          article: _articles[i],
+                          onTap: () => context.push('/articles/${_articles[i].id}'),
+                        ),
+                      ),
+                    ),
     );
   }
 }
 
-class _LevelFilterBar extends StatelessWidget {
-  const _LevelFilterBar({required this.selected, required this.onSelect});
-  final String?               selected;
+// ── Widgets ──────────────────────────────────────────────────
+
+class _LevelFilter extends StatelessWidget {
+  const _LevelFilter({required this.selected, required this.onSelect});
+  final String? selected;
   final void Function(String) onSelect;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 52,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding:         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        children: AppConstants.cefrLevels.map((level) {
-          final color    = AppTheme.cefrColors[level] ?? Colors.grey;
-          final isSelected = selected == level;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label:           Text(level),
-              selected:        isSelected,
-              onSelected:      (_) => onSelect(level),
-              selectedColor:   color.withAlpha(50),
-              checkmarkColor:  color,
-              labelStyle:      TextStyle(
-                color:      isSelected ? color : null,
-                fontWeight: isSelected ? FontWeight.w600 : null,
-              ),
-            ),
-          );
-        }).toList(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          _FilterChip(label: '全部', color: AppTheme.primary,
+              selected: selected == null, onTap: () => onSelect('')),
+          ...AppConstants.cefrLevels.map((l) => _FilterChip(
+            label: l,
+            color: AppTheme.cefrColors[l]!,
+            selected: selected == l,
+            onTap: () => onSelect(l),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final Color  color;
+  final bool   selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color : color.withAlpha(20),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: selected ? color : color.withAlpha(60), width: 1.5),
+        ),
+        child: Text(label,
+            style: TextStyle(
+              color: selected ? Colors.white : color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            )),
       ),
     );
   }
@@ -100,100 +144,150 @@ class _LevelFilterBar extends StatelessWidget {
 
 class _ArticleTile extends StatelessWidget {
   const _ArticleTile({required this.article, required this.onTap});
-  final Map<String, dynamic> article;
-  final VoidCallback         onTap;
+  final ArticleModel article;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme      = Theme.of(context);
-    final levelColor = AppTheme.cefrColors[article['cefr_level']] ?? Colors.grey;
-    final read       = article['read_progress'] as Map<String, dynamic>?;
-    final pct        = read?['progress_pct'] as int? ?? 0;
+    final levelColor = AppTheme.cefrColors[article.cefrLevel] ?? Colors.grey;
 
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Thumbnail
-                  if (article['cover_image_url'] != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        article['cover_image_url'],
-                        width: 72, height: 72, fit: BoxFit.cover,
-                      ),
-                    )
-                  else
-                    Container(
-                      width:       72,
-                      height:      72,
-                      decoration:  BoxDecoration(
-                        color:        levelColor.withAlpha(25),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.article_rounded, color: levelColor, size: 32),
-                    ),
-                  const SizedBox(width: 14),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cover / icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppTheme.primary.withAlpha(180), AppTheme.primary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.article_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(article.title,
+                        style: theme.textTheme.titleSmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    if (article.subtitle != null) ...[
+                      const SizedBox(height: 3),
+                      Text(article.subtitle!,
+                          style: theme.textTheme.bodySmall!.copyWith(
+                              color: theme.colorScheme.onSurface.withAlpha(130)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
                       children: [
-                        Text(
-                          article['title'] ?? '',
-                          style:    theme.textTheme.titleSmall,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color:        levelColor.withAlpha(30),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(article['cefr_level'] ?? '',
-                                  style: TextStyle(color: levelColor,
-                                      fontSize: 11, fontWeight: FontWeight.w600)),
-                            ),
-                            const SizedBox(width: 8),
-                            if (article['reading_time_mins'] != null)
-                              Text('${article['reading_time_mins']} min',
-                                  style: theme.textTheme.bodySmall),
-                            if (read?['is_completed'] == true) ...[
-                              const SizedBox(width: 8),
-                              const Icon(Icons.check_circle,
-                                  size: 14, color: Colors.green),
-                            ],
-                          ],
-                        ),
+                        _Pill(article.cefrLevel, levelColor),
+                        const SizedBox(width: 8),
+                        Icon(Icons.schedule_rounded, size: 12,
+                            color: theme.colorScheme.onSurface.withAlpha(100)),
+                        const SizedBox(width: 3),
+                        Text('${article.readingTimeMins} min',
+                            style: theme.textTheme.bodySmall),
+                        if (article.isCompleted) ...[
+                          const SizedBox(width: 8),
+                          Icon(Icons.check_circle_rounded,
+                              size: 14, color: AppTheme.cefrColors['A2']),
+                        ],
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Read progress bar
-            if (pct > 0 && pct < 100)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                child: LinearProgressIndicator(
-                  value:           pct / 100,
-                  minHeight:       3,
-                  backgroundColor: Colors.transparent,
+                    if (article.progressPct > 0 && !article.isCompleted) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: article.progressPct / 100,
+                          minHeight: 4,
+                          backgroundColor: AppTheme.primary.withAlpha(20),
+                          valueColor: AlwaysStoppedAnimation(levelColor),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-          ],
+              Icon(Icons.chevron_right_rounded,
+                  color: theme.colorScheme.onSurface.withAlpha(80)),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill(this.label, this.color);
+  final String label;
+  final Color  color;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    decoration: BoxDecoration(
+        color: color.withAlpha(25), borderRadius: BorderRadius.circular(10)),
+    child: Text(label,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+  );
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.auto_stories_outlined, size: 64,
+            color: AppTheme.primary.withAlpha(80)),
+        const SizedBox(height: 16),
+        Text('目前沒有文章', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text('請稍後再查看', style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(130))),
+      ],
+    ),
+  );
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+  final String   message;
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.wifi_off_rounded, size: 64, color: AppTheme.red.withAlpha(120)),
+        const SizedBox(height: 16),
+        Text(message, style: Theme.of(context).textTheme.bodyLarge),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('重試'),
+          style: FilledButton.styleFrom(minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+        ),
+      ],
+    ),
+  );
 }
