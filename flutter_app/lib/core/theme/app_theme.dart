@@ -137,14 +137,14 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: isDark ? cardDark : cardLight,
         indicatorColor:  gold.withAlpha(35),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        iconTheme: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return IconThemeData(color: isDark ? gold : primary, size: 22);
           }
           return IconThemeData(color: isDark ? Colors.white38 : const Color(0xFF9E9890), size: 22);
         }),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        labelTextStyle: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return GoogleFonts.lato(fontSize: 11, fontWeight: FontWeight.w700,
                 color: isDark ? gold : primary);
           }
@@ -152,8 +152,6 @@ class AppTheme {
               color: isDark ? Colors.white38 : const Color(0xFF9E9890));
         }),
         height: 68,
-        elevation: 0,
-        shadowColor: Colors.transparent,
       ),
 
       chipTheme: ChipThemeData(
