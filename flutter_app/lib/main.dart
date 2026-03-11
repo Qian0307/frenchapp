@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -48,6 +49,21 @@ Future<void> main() async {
     // Notifications
     await NotificationService.instance.initialize();
 
+    // Windows URL scheme 自動註冊 (frenchmind://)
+    if (Platform.isWindows) {
+      await _registerWindowsUrlScheme();
+    }
+
+    // Deep link 處理（email 驗證回調）
+    final appLinks = AppLinks();
+    final initialUri = await appLinks.getInitialLink();
+    if (initialUri != null) {
+      await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
+    }
+    appLinks.uriLinkStream.listen((uri) async {
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    });
+
     runApp(const ProviderScope(child: FrenchLearningApp()));
   } catch (e, st) {
     // Write crash log so we can debug Windows startup failures
@@ -60,6 +76,19 @@ Future<void> main() async {
       );
     } catch (_) {}
     rethrow;
+  }
+}
+
+/// 將 frenchmind:// 協議寫入 HKCU，不需要管理員權限
+Future<void> _registerWindowsUrlScheme() async {
+  final exe = Platform.resolvedExecutable;
+  final entries = [
+    [r'HKCU\Software\Classes\frenchmind', '/ve', '/d', 'URL:FrenchMind Protocol'],
+    [r'HKCU\Software\Classes\frenchmind', '/v', 'URL Protocol', '/d', ''],
+    [r'HKCU\Software\Classes\frenchmind\shell\open\command', '/ve', '/d', '"$exe" "%1"'],
+  ];
+  for (final args in entries) {
+    await Process.run('reg', ['add', args[0], ...args.sublist(1), '/f']);
   }
 }
 

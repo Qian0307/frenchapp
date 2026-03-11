@@ -52,6 +52,9 @@ dependencies:
   # Window management (ensures window is visible on Windows desktop)
   window_manager: ^0.3.9
 
+  # Deep links (custom URL scheme for email verification on desktop)
+  app_links: ^6.3.4
+
   # Text processing (article word tap)
   flutter_widget_from_html_core: ^0.14.3
 

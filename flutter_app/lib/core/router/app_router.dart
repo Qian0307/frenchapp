@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,10 +19,31 @@ import '../shell/main_shell.dart';
 
 part 'app_router.g.dart';
 
+/// 監聽 Supabase auth 狀態變化，通知 GoRouter 重新評估 redirect
+class _AuthNotifier extends ChangeNotifier {
+  _AuthNotifier() {
+    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  late final StreamSubscription<AuthState> _sub;
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
 @riverpod
 GoRouter appRouter(AppRouterRef ref) {
+  final authNotifier = _AuthNotifier();
+  ref.onDispose(authNotifier.dispose);
+
   return GoRouter(
     initialLocation: '/dashboard',
+    refreshListenable: authNotifier,
     redirect: (context, state) {
       final session = Supabase.instance.client.auth.currentSession;
       final isAuth  = session != null;
