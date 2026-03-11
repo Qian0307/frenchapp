@@ -55,6 +55,13 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } on AuthException catch (e) {
       setState(() => _error = e.message);
+    } on Exception catch (e) {
+      final msg = e.toString();
+      if (msg.contains('SocketException') || msg.contains('Failed host lookup') || msg.contains('network')) {
+        setState(() => _error = '網路連線失敗，請確認網路後重試');
+      } else {
+        setState(() => _error = '註冊失敗：$msg');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

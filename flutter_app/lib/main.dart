@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
@@ -13,6 +14,22 @@ import 'shared/providers/supabase_provider.dart';
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Windows 視窗設定（確保視窗正確顯示在螢幕上）
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      await windowManager.ensureInitialized();
+      const windowOptions = WindowOptions(
+        size: Size(1100, 750),
+        minimumSize: Size(800, 600),
+        center: true,
+        title: 'FrenchMind',
+        skipTaskbar: false,
+      );
+      await windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
+    }
 
     // Supabase
     await Supabase.initialize(
@@ -36,7 +53,7 @@ Future<void> main() async {
     // Write crash log so we can debug Windows startup failures
     try {
       final logPath = Platform.isWindows
-          ? '${Platform.environment['USERPROFILE']}\\Desktop\\frenchmind_crash.log'
+          ? '${Platform.environment['LOCALAPPDATA']}\\frenchmind_crash.log'
           : '/tmp/frenchmind_crash.log';
       await File(logPath).writeAsString(
         'CRASH at ${DateTime.now()}\n\nError: $e\n\nStackTrace:\n$st\n',

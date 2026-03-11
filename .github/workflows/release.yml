@@ -94,6 +94,7 @@ jobs:
 
       - name: Build Windows
         working-directory: flutter_app
+        shell: pwsh
         run: |
           flutter build windows --release `
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} `
