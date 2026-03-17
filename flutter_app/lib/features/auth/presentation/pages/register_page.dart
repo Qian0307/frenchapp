@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,9 +35,13 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; _error = null; });
     try {
+      final redirectTo = kIsWeb
+          ? Uri.base.origin
+          : 'frenchmind://auth/callback';
       final response = await Supabase.instance.client.auth.signUp(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
+        emailRedirectTo: redirectTo,
         data: {
           'username': _usernameCtrl.text.trim(),
           'target_level': _selectedLevel,
