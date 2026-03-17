@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,7 +20,7 @@ Future<void> main() async {
     AppConstants.validateCredentials();
 
     // Windows 視窗設定（確保視窗正確顯示在螢幕上）
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       await windowManager.ensureInitialized();
       const windowOptions = WindowOptions(
         size: Size(1100, 750),
@@ -51,20 +52,22 @@ Future<void> main() async {
     // Notifications
     await NotificationService.instance.initialize();
 
-    // Windows URL scheme 自動註冊 (frenchmind://)
-    if (Platform.isWindows) {
-      await _registerWindowsUrlScheme();
-    }
+    if (!kIsWeb) {
+      // Windows URL scheme 自動註冊 (frenchmind://)
+      if (Platform.isWindows) {
+        await _registerWindowsUrlScheme();
+      }
 
-    // Deep link 處理（email 驗證回調）
-    final appLinks = AppLinks();
-    final initialUri = await appLinks.getInitialLink();
-    if (initialUri != null) {
-      await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
+      // Deep link 處理（email 驗證回調）
+      final appLinks = AppLinks();
+      final initialUri = await appLinks.getInitialLink();
+      if (initialUri != null) {
+        await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
+      }
+      appLinks.uriLinkStream.listen((uri) async {
+        await Supabase.instance.client.auth.getSessionFromUrl(uri);
+      });
     }
-    appLinks.uriLinkStream.listen((uri) async {
-      await Supabase.instance.client.auth.getSessionFromUrl(uri);
-    });
 
     runApp(const ProviderScope(child: FrenchLearningApp()));
   } catch (e, st) {
