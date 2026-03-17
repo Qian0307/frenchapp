@@ -72,7 +72,7 @@ class AppTheme {
       textTheme:    textTheme,
       scaffoldBackgroundColor: isDark ? surfaceDark : surfaceLight,
 
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color:     isDark ? cardDark : cardLight,
         elevation: isDark ? 0 : 2,
         shadowColor: primary.withAlpha(25),

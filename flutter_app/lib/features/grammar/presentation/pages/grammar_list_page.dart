@@ -168,7 +168,7 @@ class _LessonTile extends StatelessWidget {
                 height: 52,
                 decoration: BoxDecoration(
                   color: isDone
-                      ? AppTheme.cefrColors['A2']!.withAlpha(25)
+                      ? (AppTheme.cefrColors['A2'] ?? Colors.green).withAlpha(25)
                       : isStarted
                           ? AppTheme.gold.withAlpha(25)
                           : levelColor.withAlpha(20),
@@ -216,7 +216,7 @@ class _LessonTile extends StatelessWidget {
                         if (isDone && lesson.bestScorePct != null) ...[
                           const SizedBox(width: 6),
                           _Pill('${lesson.bestScorePct}%',
-                              AppTheme.cefrColors['A2']!),
+                              AppTheme.cefrColors['A2'] ?? Colors.green),
                         ],
                       ],
                     ),

@@ -10,11 +10,13 @@ import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
-import 'shared/providers/supabase_provider.dart';
 
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Fail fast if Supabase credentials are missing
+    AppConstants.validateCredentials();
 
     // Windows 視窗設定（確保視窗正確顯示在螢幕上）
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {

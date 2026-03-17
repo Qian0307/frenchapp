@@ -21,11 +21,12 @@ class FlashcardSessionPage extends ConsumerStatefulWidget {
 
 class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
   List<UserVocabProgress> _cards = [];
-  int    _currentIndex  = 0;
-  bool   _isFlipped     = false;
-  bool   _isLoading     = true;
-  bool   _sessionDone   = false;
+  int     _currentIndex  = 0;
+  bool    _isFlipped     = false;
+  bool    _isLoading     = true;
+  bool    _sessionDone   = false;
   String? _sessionId;
+  String? _errorMessage;
 
   int _totalReviewed = 0;
   int _totalCorrect  = 0;
@@ -39,6 +40,7 @@ class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
   }
 
   Future<void> _loadSession() async {
+    setState(() { _isLoading = true; _errorMessage = null; });
     final repo = ref.read(flashcardRepositoryProvider);
     try {
       _sessionId = await repo.startSession();
@@ -46,34 +48,46 @@ class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
         limit: 20,
         type:  widget.sessionType == 'mistake_review' ? 'scheduled' : widget.sessionType,
       );
-      setState(() {
-        _cards    = cards;
-        _isLoading = false;
-      });
-      _sessionWatch.start();
-      _cardWatch.start();
+      if (mounted) {
+        setState(() {
+          _cards     = cards;
+          _isLoading = false;
+        });
+        _sessionWatch.start();
+        _cardWatch.start();
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading    = false;
+        });
+      }
     }
   }
 
   void _flipCard() => setState(() => _isFlipped = true);
 
   Future<void> _gradeCard(ReviewQuality quality) async {
-    if (_sessionId == null || _currentIndex >= _cards.size) return;
+    if (_sessionId == null || _currentIndex >= _cards.length) return;
 
-    final card      = _cards[_currentIndex];
+    final card       = _cards[_currentIndex];
     final responseMs = _cardWatch.elapsedMilliseconds;
-    _cardWatch.reset();
-    _cardWatch.start();
+    _cardWatch
+      ..reset()
+      ..start();
 
     final repo = ref.read(flashcardRepositoryProvider);
-    await repo.submitReview(
-      sessionId:    _sessionId!,
-      vocabularyId: card.vocabularyId,
-      quality:      quality,
-      responseMs:   responseMs,
-    );
+    try {
+      await repo.submitReview(
+        sessionId:    _sessionId!,
+        vocabularyId: card.vocabularyId,
+        quality:      quality,
+        responseMs:   responseMs,
+      );
+    } catch (_) {
+      // Best-effort: don't block UX on review submit failure
+    }
 
     _totalReviewed++;
     if (quality == ReviewQuality.good || quality == ReviewQuality.easy) {
@@ -82,9 +96,7 @@ class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
 
     // If wrong, append card to end of queue (leitner-style)
     if (quality == ReviewQuality.again) {
-      setState(() {
-        _cards = [..._cards, card];
-      });
+      setState(() => _cards = [..._cards, card]);
     }
 
     if (_currentIndex + 1 >= _cards.length) {
@@ -99,20 +111,50 @@ class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
 
   Future<void> _endSession() async {
     _sessionWatch.stop();
-    final repo = ref.read(flashcardRepositoryProvider);
-    await repo.endSession(
-      sessionId:     _sessionId!,
-      cardsReviewed: _totalReviewed,
-      cardsCorrect:  _totalCorrect,
-      durationSecs:  _sessionWatch.elapsed.inSeconds,
-    );
-    setState(() => _sessionDone = true);
+    if (_sessionId == null) {
+      setState(() => _sessionDone = true);
+      return;
+    }
+    try {
+      final repo = ref.read(flashcardRepositoryProvider);
+      await repo.endSession(
+        sessionId:     _sessionId!,
+        cardsReviewed: _totalReviewed,
+        cardsCorrect:  _totalCorrect,
+        durationSecs:  _sessionWatch.elapsed.inSeconds,
+      );
+    } catch (_) {
+      // Best-effort: show summary even if end-session call fails
+    }
+    if (mounted) setState(() => _sessionDone = true);
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64),
+              const SizedBox(height: 16),
+              Text('無法載入複習卡片',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _loadSession,
+                child: const Text('重試'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_cards.isEmpty) {
@@ -138,7 +180,7 @@ class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
             if (mounted) context.pop();
           },
         ),
-        title: Text('Review Session'),
+        title: const Text('複習練習'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -166,7 +208,7 @@ class _FlashcardSessionPageState extends ConsumerState<FlashcardSessionPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: FlashcardWidget(
-                  progress: card,
+                  progress:  card,
                   isFlipped: _isFlipped,
                   onTap:     _flipCard,
                 ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.05, end: 0),
@@ -213,12 +255,14 @@ class _NoCardsView extends StatelessWidget {
           children: [
             const Icon(Icons.check_circle_outline, size: 80, color: Colors.green),
             const SizedBox(height: 16),
-            Text('All caught up!', style: Theme.of(context).textTheme.headlineMedium),
+            Text('All caught up!',
+                style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
             Text('No cards due for review today.',
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 24),
-            FilledButton(onPressed: onBack, child: const Text('Back to Dashboard')),
+            FilledButton(
+                onPressed: onBack, child: const Text('Back to Dashboard')),
           ],
         ),
       ),
@@ -232,13 +276,13 @@ class _SessionSummaryView extends StatelessWidget {
     required this.correct,
     required this.onDone,
   });
-  final int total;
-  final int correct;
+  final int          total;
+  final int          correct;
   final VoidCallback onDone;
 
   @override
   Widget build(BuildContext context) {
-    final pct = total > 0 ? (correct / total * 100).round() : 0;
+    final pct   = total > 0 ? (correct / total * 100).round() : 0;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -249,7 +293,8 @@ class _SessionSummaryView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Session Complete!',
-                  style: theme.textTheme.displayMedium, textAlign: TextAlign.center),
+                  style: theme.textTheme.displayMedium,
+                  textAlign: TextAlign.center),
               const SizedBox(height: 32),
               _StatRow(label: 'Cards reviewed', value: '$total'),
               _StatRow(label: 'Correct',        value: '$correct'),
@@ -286,8 +331,4 @@ class _StatRow extends StatelessWidget {
       ),
     );
   }
-}
-
-extension on List {
-  int get size => length;
 }

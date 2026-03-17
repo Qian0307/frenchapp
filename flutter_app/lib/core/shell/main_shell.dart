@@ -16,7 +16,12 @@ class MainShell extends StatelessWidget {
 
   int _locationToIndex(String location) {
     for (int i = 0; i < _tabs.length; i++) {
-      if (location.startsWith(_tabs[i].$1)) return i;
+      final tabPath = _tabs[i].$1;
+      // Exact match or sub-route (must be followed by '/' or end of string)
+      if (location == tabPath ||
+          location.startsWith('$tabPath/')) {
+        return i;
+      }
     }
     return 0;
   }

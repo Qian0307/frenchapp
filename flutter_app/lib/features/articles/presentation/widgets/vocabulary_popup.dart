@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../../articles/data/repositories/article_repository.dart';
+import '../../../flashcards/data/repositories/flashcard_repository.dart';
+
 /// Bottom-sheet popup shown when the user taps a vocabulary word in an article.
 class VocabularyPopup extends ConsumerStatefulWidget {
   const VocabularyPopup({super.key, required this.vocabId});
@@ -13,9 +16,10 @@ class VocabularyPopup extends ConsumerStatefulWidget {
 
 class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
   Map<String, dynamic>? _vocab;
-  bool  _isLoading = true;
-  bool  _enrolled  = false;
-  final _player    = AudioPlayer();
+  bool  _isLoading    = true;
+  bool  _enrolled     = false;
+  String? _errorMessage;
+  final _player = AudioPlayer();
 
   @override
   void initState() {
@@ -24,24 +28,23 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
   }
 
   Future<void> _loadVocab() async {
-    // TODO: call ArticleRepository.lookupVocab(vocabId)
-    // For now use placeholder data
-    await Future.delayed(const Duration(milliseconds: 300));
-    setState(() {
-      _vocab = {
-        'french_word':     'exemple',
-        'english_trans':   'example',
-        'pronunciation_ipa': '/ɛɡ.zɑ̃pl/',
-        'word_class':      'noun',
-        'gender':          'masculine',
-        'cefr_level':      'A1',
-        'usage_notes':     'Very common word used in all registers.',
-        'example_sentences': [
-          {'fr': 'Voici un exemple.', 'en': 'Here is an example.'}
-        ],
-      };
-      _isLoading = false;
-    });
+    try {
+      final repo  = ref.read(articleRepositoryProvider);
+      final vocab = await repo.lookupVocab(widget.vocabId);
+      if (mounted) {
+        setState(() {
+          _vocab     = vocab;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading    = false;
+        });
+      }
+    }
   }
 
   Future<void> _playAudio() async {
@@ -49,6 +52,24 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
     if (url == null) return;
     await _player.setUrl(url);
     await _player.play();
+  }
+
+  Future<void> _enroll() async {
+    try {
+      await ref.read(flashcardRepositoryProvider).enrollCard(widget.vocabId);
+      if (mounted) {
+        setState(() => _enrolled = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to your flashcard deck')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -70,8 +91,8 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
         if (_isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (_vocab == null) {
-          return const Center(child: Text('Word not found'));
+        if (_errorMessage != null || _vocab == null) {
+          return Center(child: Text(_errorMessage != null ? 'Word not found' : 'Word not found'));
         }
 
         return Container(
@@ -108,12 +129,12 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _vocab!['french_word'] ?? '',
+                                _vocab!['french_word'] as String? ?? '',
                                 style: theme.textTheme.displayMedium,
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _vocab!['pronunciation_ipa'] ?? '',
+                                _vocab!['pronunciation_ipa'] as String? ?? '',
                                 style: theme.textTheme.bodyLarge!.copyWith(
                                   fontStyle: FontStyle.italic,
                                   color: theme.colorScheme.onSurface.withAlpha(153),
@@ -122,7 +143,6 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
                             ],
                           ),
                         ),
-                        // Audio play button
                         IconButton(
                           onPressed:  _playAudio,
                           icon:       const Icon(Icons.volume_up_rounded),
@@ -138,17 +158,17 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
                       spacing: 8,
                       children: [
                         if (_vocab!['word_class'] != null)
-                          Chip(label: Text(_vocab!['word_class'])),
+                          Chip(label: Text(_vocab!['word_class'] as String)),
                         if (_vocab!['gender'] != null)
-                          Chip(label: Text(_vocab!['gender'])),
+                          Chip(label: Text(_vocab!['gender'] as String)),
                         if (_vocab!['cefr_level'] != null)
-                          Chip(label: Text(_vocab!['cefr_level'])),
+                          Chip(label: Text(_vocab!['cefr_level'] as String)),
                       ],
                     ),
                     const SizedBox(height: 16),
 
                     // 繁體中文翻譯 (primary)
-                    if ((_vocab!['translations'] as Map<String,dynamic>?)?['zh_tw'] != null) ...[
+                    if ((_vocab!['translations'] as Map<String, dynamic>?)?['zh_tw'] != null) ...[
                       Text('繁體中文',
                           style: theme.textTheme.labelLarge!.copyWith(
                             color:         theme.colorScheme.primary,
@@ -157,21 +177,21 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
                           )),
                       const SizedBox(height: 4),
                       Text(
-                        (_vocab!['translations'] as Map<String,dynamic>)['zh_tw'] as String,
+                        (_vocab!['translations'] as Map<String, dynamic>)['zh_tw'] as String,
                         style: theme.textTheme.titleLarge!.copyWith(fontSize: 22),
                       ),
                       const SizedBox(height: 12),
                     ],
 
-                    // English translation (secondary)
+                    // English translation
                     Text('English',
                         style: theme.textTheme.labelLarge!.copyWith(
-                          color:       theme.colorScheme.primary,
+                          color:         theme.colorScheme.primary,
                           letterSpacing: 1,
-                          fontSize:    11,
+                          fontSize:      11,
                         )),
                     const SizedBox(height: 4),
-                    Text(_vocab!['english_trans'] ?? '',
+                    Text(_vocab!['english_trans'] as String? ?? '',
                         style: theme.textTheme.titleMedium),
                     const SizedBox(height: 16),
 
@@ -179,14 +199,16 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
                     if ((_vocab!['example_sentences'] as List?)?.isNotEmpty ?? false) ...[
                       Text('Examples',
                           style: theme.textTheme.labelLarge!.copyWith(
-                            color: theme.colorScheme.primary, letterSpacing: 1, fontSize: 11,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 1,
+                            fontSize: 11,
                           )),
                       const SizedBox(height: 4),
                       for (final ex in (_vocab!['example_sentences'] as List).take(2)) ...[
-                        Text(ex['fr'] ?? '',
+                        Text((ex as Map)['fr'] as String? ?? '',
                             style: theme.textTheme.bodyLarge!.copyWith(
                                 fontStyle: FontStyle.italic)),
-                        Text(ex['en'] ?? '',
+                        Text(ex['en'] as String? ?? '',
                             style: theme.textTheme.bodyMedium!.copyWith(
                                 color: theme.colorScheme.onSurface.withAlpha(153))),
                         const SizedBox(height: 8),
@@ -198,10 +220,12 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
                       const SizedBox(height: 8),
                       Text('Notes',
                           style: theme.textTheme.labelLarge!.copyWith(
-                            color: theme.colorScheme.primary, letterSpacing: 1, fontSize: 11,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 1,
+                            fontSize: 11,
                           )),
                       const SizedBox(height: 4),
-                      Text(_vocab!['usage_notes'],
+                      Text(_vocab!['usage_notes'] as String,
                           style: theme.textTheme.bodyMedium),
                     ],
 
@@ -209,15 +233,7 @@ class _VocabularyPopupState extends ConsumerState<VocabularyPopup> {
 
                     // Add to deck button
                     FilledButton.icon(
-                      onPressed: _enrolled
-                          ? null
-                          : () {
-                              setState(() => _enrolled = true);
-                              // TODO: call FlashcardRepository.enrollCard
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Added to your flashcard deck')),
-                              );
-                            },
+                      onPressed: _enrolled ? null : _enroll,
                       icon:  Icon(_enrolled ? Icons.check : Icons.add),
                       label: Text(_enrolled ? 'Added to Deck' : 'Add to Flashcard Deck'),
                     ),

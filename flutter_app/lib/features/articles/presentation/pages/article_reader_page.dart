@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../data/repositories/article_repository.dart';
 import '../widgets/annotated_article_body.dart';
 import '../widgets/vocabulary_popup.dart';
 
@@ -19,11 +21,11 @@ class _ArticleReaderPageState extends ConsumerState<ArticleReaderPage> {
   final _audioPlayer      = AudioPlayer();
 
   Map<String, dynamic>? _article;
-  List<dynamic>         _linkedVocab  = [];
   bool                  _isLoading    = true;
+  String?               _errorMessage;
   bool                  _audioPlaying = false;
-  int                   _wordsLooked  = 0;
   double                _scrollProgress = 0;
+  Timer?                _progressTimer;
 
   @override
   void initState() {
@@ -33,8 +35,23 @@ class _ArticleReaderPageState extends ConsumerState<ArticleReaderPage> {
   }
 
   Future<void> _loadArticle() async {
-    // TODO: call ArticleRepository.getArticle(widget.articleId)
-    setState(() => _isLoading = false);
+    try {
+      final repo    = ref.read(articleRepositoryProvider);
+      final article = await repo.getArticle(widget.articleId);
+      if (mounted) {
+        setState(() {
+          _article   = article;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading    = false;
+        });
+      }
+    }
   }
 
   void _onScroll() {
@@ -43,27 +60,38 @@ class _ArticleReaderPageState extends ConsumerState<ArticleReaderPage> {
     final pct = (_scrollController.offset / max * 100).clamp(0, 100).toInt();
     if (pct != (_scrollProgress * 100).toInt()) {
       setState(() => _scrollProgress = pct / 100);
-      // TODO: debounce and call updateProgress(pct)
+      _progressTimer?.cancel();
+      _progressTimer = Timer(const Duration(seconds: 2), () {
+        ref.read(articleRepositoryProvider)
+            .updateProgress(widget.articleId, pct)
+            .ignore();
+      });
     }
   }
 
   Future<void> _toggleAudio() async {
     final url = _article?['audio_url'] as String?;
     if (url == null) return;
-    if (_audioPlaying) {
-      await _audioPlayer.pause();
-    } else {
-      await _audioPlayer.setUrl(url);
-      await _audioPlayer.play();
+    try {
+      if (_audioPlaying) {
+        await _audioPlayer.pause();
+      } else {
+        await _audioPlayer.setUrl(url);
+        await _audioPlayer.play();
+      }
+      setState(() => _audioPlaying = !_audioPlaying);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('無法播放音頻')),
+        );
+      }
     }
-    setState(() => _audioPlaying = !_audioPlaying);
   }
 
   void _onVocabTap(String vocabId) {
-    _wordsLooked++;
-    // Show bottom sheet with word detail
     showModalBottomSheet(
-      context:     context,
+      context:            context,
       isScrollControlled: true,
       builder: (_) => VocabularyPopup(vocabId: vocabId),
     );
@@ -71,6 +99,7 @@ class _ArticleReaderPageState extends ConsumerState<ArticleReaderPage> {
 
   @override
   void dispose() {
+    _progressTimer?.cancel();
     _scrollController.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -79,6 +108,33 @@ class _ArticleReaderPageState extends ConsumerState<ArticleReaderPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 12),
+              Text('無法載入文章', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: () {
+                  setState(() {
+                    _errorMessage = null;
+                    _isLoading    = true;
+                  });
+                  _loadArticle();
+                },
+                child: const Text('重試'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: CustomScrollView(

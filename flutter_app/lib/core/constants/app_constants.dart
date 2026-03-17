@@ -7,6 +7,23 @@ class AppConstants {
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY',
       defaultValue: 'YOUR_ANON_KEY');
 
+  /// Call this early in main() before Supabase.initialize().
+  /// Throws [StateError] if credentials are still placeholders.
+  static void validateCredentials() {
+    if (supabaseUrl == 'https://YOUR_PROJECT.supabase.co') {
+      throw StateError(
+        'SUPABASE_URL is not set. '
+        'Run with --dart-define=SUPABASE_URL=https://xxxx.supabase.co',
+      );
+    }
+    if (supabaseAnonKey == 'YOUR_ANON_KEY') {
+      throw StateError(
+        'SUPABASE_ANON_KEY is not set. '
+        'Run with --dart-define=SUPABASE_ANON_KEY=your-anon-key',
+      );
+    }
+  }
+
   // ── Edge Function base paths ──────────────────────────────
   static const fnFlashcards    = 'flashcards';
   static const fnArticles      = 'articles';

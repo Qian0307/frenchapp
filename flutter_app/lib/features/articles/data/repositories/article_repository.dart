@@ -38,6 +38,33 @@ class ArticleRepository {
     _checkError(res);
   }
 
+  Future<Map<String, dynamic>> getArticle(String id) async {
+    final res = await _supabase.functions.invoke(
+      'articles/$id',
+      method: HttpMethod.get,
+    );
+    _checkError(res);
+    return (res.data as Map)['article'] as Map<String, dynamic>;
+  }
+
+  Future<void> updateProgress(String id, int progressPct) async {
+    final res = await _supabase.functions.invoke(
+      'articles/$id/progress',
+      body: {'progress_pct': progressPct},
+      method: HttpMethod.post,
+    );
+    _checkError(res);
+  }
+
+  Future<Map<String, dynamic>> lookupVocab(String vocabId) async {
+    final res = await _supabase.functions.invoke(
+      'articles/vocab/$vocabId',
+      method: HttpMethod.get,
+    );
+    _checkError(res);
+    return (res.data as Map)['vocabulary'] as Map<String, dynamic>;
+  }
+
   void _checkError(FunctionResponse res) {
     if (res.data is Map && (res.data as Map).containsKey('error')) {
       throw Exception((res.data as Map)['error']);

@@ -17,7 +17,6 @@ class ExerciseWidget extends StatefulWidget {
 
 class _ExerciseWidgetState extends State<ExerciseWidget> {
   String?  _selectedOption;
-  String   _fillAnswer      = '';
   bool?    _isCorrect;
   bool     _submitted        = false;
 
@@ -27,7 +26,6 @@ class _ExerciseWidgetState extends State<ExerciseWidget> {
     if (old.exercise['id'] != widget.exercise['id']) {
       setState(() {
         _selectedOption = null;
-        _fillAnswer     = '';
         _isCorrect      = null;
         _submitted      = false;
       });
@@ -135,8 +133,6 @@ class _MultipleChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       children: [
         for (final opt in options)

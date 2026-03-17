@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/models/mistake_model.dart';
+import '../../data/repositories/mistake_book_repository.dart';
+
 /// Mistake Book: lists incorrectly-answered vocabulary with notes and resolve action.
 class MistakeBookPage extends ConsumerStatefulWidget {
   const MistakeBookPage({super.key});
@@ -14,8 +17,9 @@ class _MistakeBookPageState extends ConsumerState<MistakeBookPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   bool _isLoading = false;
-  List<Map<String, dynamic>> _mistakes   = [];
-  List<Map<String, dynamic>> _resolved   = [];
+  String? _errorMessage;
+  List<MistakeEntry> _mistakes = [];
+  List<MistakeEntry> _resolved = [];
 
   @override
   void initState() {
@@ -25,22 +29,60 @@ class _MistakeBookPageState extends ConsumerState<MistakeBookPage>
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
-    // TODO: MistakeBookRepository.listMistakes()
-    await Future.delayed(const Duration(milliseconds: 400));
-    setState(() => _isLoading = false);
+    setState(() {
+      _isLoading    = true;
+      _errorMessage = null;
+    });
+    try {
+      final repo     = ref.read(mistakeBookRepositoryProvider);
+      final mistakes = await repo.listMistakes(resolved: false);
+      final resolved = await repo.listMistakes(resolved: true);
+      if (mounted) {
+        setState(() {
+          _mistakes  = mistakes;
+          _resolved  = resolved;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading    = false;
+        });
+      }
+    }
   }
 
   Future<void> _resolve(String vocabId) async {
-    // TODO: MistakeBookRepository.resolve(vocabId)
-    final idx = _mistakes.indexWhere((m) => m['vocabulary_id'] == vocabId);
-    if (idx == -1) return;
-    final resolved = _mistakes.removeAt(idx);
-    setState(() => _resolved.insert(0, {...resolved, 'is_resolved': true}));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Marked as resolved')),
-      );
+    try {
+      await ref.read(mistakeBookRepositoryProvider).resolve(vocabId);
+      final idx = _mistakes.indexWhere((m) => m.vocabularyId == vocabId);
+      if (idx == -1) return;
+      final entry = _mistakes[idx];
+      setState(() {
+        _mistakes.removeAt(idx);
+        _resolved.insert(0, MistakeEntry(
+          id:           entry.id,
+          vocabularyId: entry.vocabularyId,
+          vocabulary:   entry.vocabulary,
+          mistakeCount: entry.mistakeCount,
+          note:         entry.note,
+          isResolved:   true,
+          lastMistakeAt: entry.lastMistakeAt,
+        ));
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Marked as resolved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to resolve: $e')),
+        );
+      }
     }
   }
 
@@ -76,21 +118,38 @@ class _MistakeBookPageState extends ConsumerState<MistakeBookPage>
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabs,
-              children: [
-                _MistakeList(
-                  mistakes:   _mistakes,
-                  showResolve: true,
-                  onResolve:  _resolve,
+          : _errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48),
+                      const SizedBox(height: 12),
+                      Text('無法載入錯題本',
+                          style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: _load,
+                        child: const Text('重試'),
+                      ),
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  controller: _tabs,
+                  children: [
+                    _MistakeList(
+                      mistakes:    _mistakes,
+                      showResolve: true,
+                      onResolve:   _resolve,
+                    ),
+                    _MistakeList(
+                      mistakes:    _resolved,
+                      showResolve: false,
+                      onResolve:   (_) {},
+                    ),
+                  ],
                 ),
-                _MistakeList(
-                  mistakes:    _resolved,
-                  showResolve: false,
-                  onResolve:   (_) {},
-                ),
-              ],
-            ),
     );
   }
 }
@@ -102,9 +161,9 @@ class _MistakeList extends StatelessWidget {
     required this.onResolve,
   });
 
-  final List<Map<String, dynamic>> mistakes;
-  final bool                        showResolve;
-  final void Function(String)       onResolve;
+  final List<MistakeEntry>       mistakes;
+  final bool                     showResolve;
+  final void Function(String)    onResolve;
 
   @override
   Widget build(BuildContext context) {
@@ -125,12 +184,16 @@ class _MistakeList extends StatelessWidget {
     }
 
     return ListView.separated(
-      padding:           const EdgeInsets.all(16),
-      itemCount:         mistakes.length,
-      separatorBuilder:  (_, __) => const SizedBox(height: 8),
-      itemBuilder:       (context, i) {
+      padding:          const EdgeInsets.all(16),
+      itemCount:        mistakes.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
         final m = mistakes[i];
-        return _MistakeCard(mistake: m, showResolve: showResolve, onResolve: onResolve);
+        return _MistakeCard(
+          mistake:     m,
+          showResolve: showResolve,
+          onResolve:   onResolve,
+        );
       },
     );
   }
@@ -143,15 +206,15 @@ class _MistakeCard extends StatelessWidget {
     required this.onResolve,
   });
 
-  final Map<String, dynamic>  mistake;
-  final bool                   showResolve;
-  final void Function(String)  onResolve;
+  final MistakeEntry             mistake;
+  final bool                     showResolve;
+  final void Function(String)    onResolve;
 
   @override
   Widget build(BuildContext context) {
-    final theme  = Theme.of(context);
-    final vocab  = mistake['vocabulary'] as Map<String, dynamic>?;
-    final count  = mistake['mistake_count'] as int? ?? 1;
+    final theme = Theme.of(context);
+    final vocab = mistake.vocabulary;
+    final count = mistake.mistakeCount;
 
     return Card(
       child: Padding(
@@ -163,11 +226,10 @@ class _MistakeCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    vocab?['french_word'] ?? '—',
+                    vocab?['french_word'] as String? ?? '—',
                     style: theme.textTheme.titleLarge,
                   ),
                 ),
-                // Mistake count badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
@@ -187,18 +249,17 @@ class _MistakeCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              vocab?['english_trans'] ?? '',
+              vocab?['english_trans'] as String? ?? '',
               style: theme.textTheme.bodyMedium!.copyWith(
                   color: theme.colorScheme.onSurface.withAlpha(153)),
             ),
             const SizedBox(height: 4),
             Text(
-              vocab?['pronunciation_ipa'] ?? '',
+              vocab?['pronunciation_ipa'] as String? ?? '',
               style: theme.textTheme.bodySmall!.copyWith(fontStyle: FontStyle.italic),
             ),
 
-            // User note
-            if (mistake['note'] != null && (mistake['note'] as String).isNotEmpty) ...[
+            if (mistake.note != null && mistake.note!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -207,7 +268,7 @@ class _MistakeCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      mistake['note'] as String,
+                      mistake.note!,
                       style: theme.textTheme.bodySmall!.copyWith(
                           color: theme.colorScheme.primary),
                     ),
@@ -224,15 +285,19 @@ class _MistakeCard extends StatelessWidget {
                     onPressed: () {},
                     icon:  const Icon(Icons.edit_outlined, size: 16),
                     label: const Text('Add Note'),
-                    style: OutlinedButton.styleFrom(minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8)),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.tonal(
-                    onPressed: () => onResolve(vocab?['id'] ?? ''),
+                    onPressed: () => onResolve(mistake.vocabularyId),
+                    style: FilledButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8)),
                     child: const Text('Resolve'),
-                    style: FilledButton.styleFrom(minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   ),
                 ],
               ),

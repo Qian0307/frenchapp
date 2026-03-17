@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/repositories/grammar_repository.dart';
 import '../widgets/exercise_widget.dart';
 
 /// Lesson detail: explanation markdown + exercises in a stepper-style flow.
@@ -18,6 +19,7 @@ class _GrammarLessonPageState extends ConsumerState<GrammarLessonPage> {
   Map<String, dynamic>? _lesson;
   List<dynamic>         _exercises = [];
   bool                  _isLoading = true;
+  String?               _errorMessage;
 
   // Exercise state
   int  _phase         = 0; // 0=reading, 1=exercises, 2=complete
@@ -32,13 +34,24 @@ class _GrammarLessonPageState extends ConsumerState<GrammarLessonPage> {
   }
 
   Future<void> _loadLesson() async {
-    // TODO: GrammarRepository.getLesson(lessonId)
-    await Future.delayed(const Duration(milliseconds: 300));
-    setState(() {
-      _lesson    = {'title': 'Present Tense: -er Verbs', 'cefr_level': 'A1'};
-      _exercises = [];
-      _isLoading = false;
-    });
+    try {
+      final repo   = ref.read(grammarRepositoryProvider);
+      final lesson = await repo.getLesson(widget.lessonId);
+      if (mounted) {
+        setState(() {
+          _lesson    = lesson;
+          _exercises = (lesson['exercises'] as List?) ?? [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading    = false;
+        });
+      }
+    }
   }
 
   void _startExercises() => setState(() => _phase = 1);
@@ -58,14 +71,46 @@ class _GrammarLessonPageState extends ConsumerState<GrammarLessonPage> {
     final score = _exercises.isEmpty
         ? 100
         : (_correctCount / _totalAttempts * 100).round();
-    // TODO: GrammarRepository.completeLesson(lessonId, scorePct: score)
-    setState(() => _phase = 2);
+    try {
+      await ref.read(grammarRepositoryProvider)
+          .completeLesson(widget.lessonId, scorePct: score);
+    } catch (_) {
+      // Best-effort: don't block completion UI on network error
+    }
+    if (mounted) setState(() => _phase = 2);
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 12),
+              Text('無法載入課程', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: () {
+                  setState(() {
+                    _errorMessage = null;
+                    _isLoading    = true;
+                  });
+                  _loadLesson();
+                },
+                child: const Text('重試'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Scaffold(
@@ -123,10 +168,10 @@ class _ExplanationPhase extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Explanation text (Markdown in real impl)
+          // Explanation text
           Text(
             lesson['explanation'] ?? '',
-            style: GoogleFontsHelper.spectral(theme),
+            style: theme.textTheme.bodyLarge!.copyWith(height: 1.7, fontSize: 17),
           ),
           const SizedBox(height: 32),
 
@@ -303,11 +348,5 @@ class _EmptyExercisesView extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class GoogleFontsHelper {
-  static TextStyle spectral(ThemeData theme) {
-    return theme.textTheme.bodyLarge!.copyWith(height: 1.7, fontSize: 17);
   }
 }

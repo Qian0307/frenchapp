@@ -26,6 +26,24 @@ class GrammarRepository {
         .toList();
   }
 
+  Future<Map<String, dynamic>> getLesson(String id) async {
+    final res = await _supabase.functions.invoke(
+      'grammar/lessons/$id',
+      method: HttpMethod.get,
+    );
+    _checkError(res);
+    return (res.data as Map)['lesson'] as Map<String, dynamic>;
+  }
+
+  Future<void> completeLesson(String id, {required int scorePct}) async {
+    final res = await _supabase.functions.invoke(
+      'grammar/lessons/$id/complete',
+      body: {'score_pct': scorePct},
+      method: HttpMethod.post,
+    );
+    _checkError(res);
+  }
+
   void _checkError(FunctionResponse res) {
     if (res.data is Map && (res.data as Map).containsKey('error')) {
       throw Exception((res.data as Map)['error']);

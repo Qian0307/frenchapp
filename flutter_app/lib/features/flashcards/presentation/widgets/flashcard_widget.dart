@@ -64,7 +64,9 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     try {
       await _player.setUrl(url);
       await _player.play();
-    } catch (_) {}
+    } catch (_) {
+      // Audio playback failure is non-critical; silently ignore
+    }
   }
 
   @override
