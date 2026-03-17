@@ -71,7 +71,7 @@ Future<DashboardStats> dashboardStats(DashboardStatsRef ref) async {
       .from('review_events')
       .select()
       .eq('user_id', userId)
-      .gte('created_at', todayStart)
+      .gte('reviewed_at', todayStart)
       .count(CountOption.exact);
 
   final cardsToday = reviewsRes.count;

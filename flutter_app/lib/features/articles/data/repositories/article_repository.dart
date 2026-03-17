@@ -82,6 +82,7 @@ class ArticleRepository {
     final res = await _supabase.functions.invoke(
       'articles/$id',
       method: HttpMethod.get,
+      headers: _authHeaders,
     );
     _checkError(res);
     return (res.data as Map)['article'] as Map<String, dynamic>;
@@ -92,6 +93,7 @@ class ArticleRepository {
       'articles/$id/progress',
       body: {'progress_pct': progressPct},
       method: HttpMethod.post,
+      headers: _authHeaders,
     );
     _checkError(res);
   }
@@ -100,9 +102,16 @@ class ArticleRepository {
     final res = await _supabase.functions.invoke(
       'articles/vocab/$vocabId',
       method: HttpMethod.get,
+      headers: _authHeaders,
     );
     _checkError(res);
     return (res.data as Map)['vocabulary'] as Map<String, dynamic>;
+  }
+
+
+  Map<String, String>? get _authHeaders {
+    final token = _supabase.auth.currentSession?.accessToken;
+    return token != null ? {'Authorization': 'Bearer $token'} : null;
   }
 
   void _checkError(FunctionResponse res) {

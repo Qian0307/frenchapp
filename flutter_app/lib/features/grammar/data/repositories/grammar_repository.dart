@@ -71,6 +71,7 @@ class GrammarRepository {
     final res = await _supabase.functions.invoke(
       'grammar/lessons/$id',
       method: HttpMethod.get,
+      headers: _authHeaders,
     );
     _checkError(res);
     return (res.data as Map)['lesson'] as Map<String, dynamic>;
@@ -81,8 +82,15 @@ class GrammarRepository {
       'grammar/lessons/$id/complete',
       body: {'score_pct': scorePct},
       method: HttpMethod.post,
+      headers: _authHeaders,
     );
     _checkError(res);
+  }
+
+
+  Map<String, String>? get _authHeaders {
+    final token = _supabase.auth.currentSession?.accessToken;
+    return token != null ? {'Authorization': 'Bearer $token'} : null;
   }
 
   void _checkError(FunctionResponse res) {

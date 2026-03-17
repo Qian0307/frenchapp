@@ -17,6 +17,7 @@ class MistakeBookRepository {
     final res = await _supabase.functions.invoke(
       'mistake-book/list?resolved=${resolved ? 'true' : 'false'}',
       method: HttpMethod.get,
+      headers: _authHeaders,
     );
     _checkError(res);
     final list = (res.data as Map)['mistakes'] as List;
@@ -30,6 +31,7 @@ class MistakeBookRepository {
       'mistake-book/resolve',
       body: {'vocabulary_id': vocabularyId},
       method: HttpMethod.post,
+      headers: _authHeaders,
     );
     _checkError(res);
   }
@@ -39,8 +41,15 @@ class MistakeBookRepository {
       'mistake-book/note',
       body: {'vocabulary_id': vocabularyId, 'note': note},
       method: HttpMethod.post,
+      headers: _authHeaders,
     );
     _checkError(res);
+  }
+
+
+  Map<String, String>? get _authHeaders {
+    final token = _supabase.auth.currentSession?.accessToken;
+    return token != null ? {'Authorization': 'Bearer $token'} : null;
   }
 
   void _checkError(FunctionResponse res) {

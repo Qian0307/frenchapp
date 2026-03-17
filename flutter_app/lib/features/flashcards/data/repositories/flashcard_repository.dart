@@ -18,13 +18,14 @@ class FlashcardRepository {
   // ── Session ──────────────────────────────────────────────
 
   Future<String> startSession() async {
-    final res = await _supabase.functions.invoke(
-      'flashcards/start',
-      body:   {},
-      method: HttpMethod.post,
-    );
-    _checkError(res);
-    return (res.data as Map)['session']['id'] as String;
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated');
+    final data = await _supabase
+        .from('review_sessions')
+        .insert({'user_id': userId, 'session_type': 'scheduled'})
+        .select()
+        .single();
+    return data['id'] as String;
   }
 
   Future<Map<String, dynamic>> endSession({
@@ -33,18 +34,18 @@ class FlashcardRepository {
     required int cardsCorrect,
     required int durationSecs,
   }) async {
-    final res = await _supabase.functions.invoke(
-      'flashcards/end',
-      body: {
-        'session_id':     sessionId,
-        'cards_reviewed': cardsReviewed,
-        'cards_correct':  cardsCorrect,
-        'duration_secs':  durationSecs,
-      },
-      method: HttpMethod.post,
-    );
-    _checkError(res);
-    return res.data as Map<String, dynamic>;
+    final data = await _supabase
+        .from('review_sessions')
+        .update({
+          'ended_at':       DateTime.now().toIso8601String(),
+          'cards_reviewed': cardsReviewed,
+          'cards_correct':  cardsCorrect,
+          'duration_secs':  durationSecs,
+        })
+        .eq('id', sessionId)
+        .select()
+        .single();
+    return data;
   }
 
   // ── Cards ─────────────────────────────────────────────────
@@ -118,6 +119,7 @@ class FlashcardRepository {
     required ReviewQuality quality,
     int? responseMs,
   }) async {
+    final token = _supabase.auth.currentSession?.accessToken;
     final res = await _supabase.functions.invoke(
       'flashcards/review',
       body: {
@@ -127,18 +129,18 @@ class FlashcardRepository {
         if (responseMs != null) 'response_ms': responseMs,
       },
       method: HttpMethod.post,
+      headers: token != null ? {'Authorization': 'Bearer $token'} : null,
     );
     _checkError(res);
     return res.data as Map<String, dynamic>;
   }
 
   Future<void> enrollCard(String vocabularyId) async {
-    final res = await _supabase.functions.invoke(
-      'flashcards/enroll',
-      body:   {'vocabulary_id': vocabularyId},
-      method: HttpMethod.post,
-    );
-    _checkError(res);
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated');
+    await _supabase
+        .from('user_vocabulary_progress')
+        .insert({'user_id': userId, 'vocabulary_id': vocabularyId});
   }
 
   // ── Helpers ───────────────────────────────────────────────
