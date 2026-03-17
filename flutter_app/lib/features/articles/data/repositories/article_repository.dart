@@ -13,20 +13,59 @@ class ArticleRepository {
   ArticleRepository(this._supabase);
   final SupabaseClient _supabase;
 
+  /// Lists articles directly from the database.
+  /// Uses a direct Supabase query instead of an edge function to avoid
+  /// Flutter Web Authorization header issues.
   Future<List<ArticleModel>> listArticles({String? level, int page = 1}) async {
-    final params = <String, String>{'page': page.toString()};
-    if (level != null) params['level'] = level;
-    final qs = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    const limit = 20;
+    final offset = (page - 1) * limit;
+    final userId = _supabase.auth.currentUser?.id;
 
-    final res = await _supabase.functions.invoke(
-      'articles/list?$qs',
-      method: HttpMethod.get,
-    );
-    _checkError(res);
-    final list = (res.data as Map)['articles'] as List;
-    return list
-        .map((e) => ArticleModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    var q = _supabase
+        .from('articles')
+        .select('id, title, subtitle, cefr_level, reading_time_mins, topic_tags, cover_image_url')
+        .eq('is_published', true);
+
+    if (level != null) {
+      q = q.eq('cefr_level', level);
+    }
+
+    final rows = await q
+        .order('published_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    if (userId == null || (rows as List).isEmpty) {
+      return (rows as List)
+          .map((e) => ArticleModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    // Fetch read progress for all articles in one query
+    final articleIds = (rows as List).map((r) => r['id'] as String).toList();
+    final progressRows = await _supabase
+        .from('user_article_progress')
+        .select('article_id, progress_pct, is_completed')
+        .eq('user_id', userId)
+        .inFilter('article_id', articleIds);
+
+    // Build a map for quick lookup
+    final progressMap = <String, Map<String, dynamic>>{};
+    for (final p in progressRows as List) {
+      progressMap[p['article_id'] as String] = p as Map<String, dynamic>;
+    }
+
+    // Merge progress into each article row so ArticleModel.fromJson works
+    return (rows as List).map((e) {
+      final articleMap = Map<String, dynamic>.from(e as Map<String, dynamic>);
+      final progress = progressMap[articleMap['id'] as String];
+      if (progress != null) {
+        articleMap['read_progress'] = {
+          'progress_pct': progress['progress_pct'],
+          'is_completed': progress['is_completed'],
+        };
+      }
+      return ArticleModel.fromJson(articleMap);
+    }).toList();
   }
 
   Future<void> startArticle(String id) async {
@@ -38,6 +77,7 @@ class ArticleRepository {
     _checkError(res);
   }
 
+  /// Fetches a single article's full content via edge function.
   Future<Map<String, dynamic>> getArticle(String id) async {
     final res = await _supabase.functions.invoke(
       'articles/$id',

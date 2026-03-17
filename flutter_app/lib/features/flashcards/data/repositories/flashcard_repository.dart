@@ -49,41 +49,65 @@ class FlashcardRepository {
 
   // ── Cards ─────────────────────────────────────────────────
 
+  /// Fetches due (or new) cards directly from the database.
+  /// Uses a direct Supabase query instead of an edge function to avoid
+  /// Flutter Web Authorization header issues.
   Future<List<UserVocabProgress>> getDueCards({
     int limit = 20,
     String type = 'scheduled',
   }) async {
-    final res = await _supabase.functions.invoke(
-      'flashcards/due?limit=$limit&type=$type',
-      method: HttpMethod.get,
-    );
-    _checkError(res);
-    final cards = (res.data as Map)['cards'] as List;
-    return cards
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final today = DateTime.now().toIso8601String().split('T')[0];
+
+    final rows = await _supabase
+        .from('user_vocabulary_progress')
+        .select('*, vocabulary:vocabulary_id(*)')
+        .eq('user_id', userId)
+        .lte('due_date', today)
+        .order('due_date', ascending: true)
+        .limit(limit);
+
+    return (rows as List)
         .map((e) => UserVocabProgress.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
+  /// Browses vocabulary directly from the database.
+  /// Uses a direct Supabase query instead of an edge function to avoid
+  /// Flutter Web Authorization header issues.
   Future<List<VocabularyModel>> browseVocabulary({
     String? level,
     String? tag,
     String? query,
     int page = 1,
   }) async {
-    final params = {
-      if (level != null) 'level': level,
-      if (tag   != null) 'tag':   tag,
-      if (query != null) 'q':     query,
-      'page': page.toString(),
-    };
-    final qs = params.entries.map((e) => '${e.key}=${e.value}').join('&');
-    final res = await _supabase.functions.invoke(
-      'flashcards/browse?$qs',
-      method: HttpMethod.get,
-    );
-    _checkError(res);
-    final vocab = (res.data as Map)['vocabulary'] as List;
-    return vocab
+    const limit = 30;
+    final offset = (page - 1) * limit;
+
+    var q = _supabase
+        .from('vocabulary')
+        .select('id, french_word, english_trans, word_class, gender, cefr_level, topic_tags, pronunciation_ipa')
+        .eq('is_active', true);
+
+    if (level != null) {
+      q = q.eq('cefr_level', level);
+    }
+
+    if (query != null && query.isNotEmpty) {
+      q = q.or('french_word.ilike.%$query%,english_trans.ilike.%$query%');
+    }
+
+    if (tag != null && tag.isNotEmpty) {
+      q = q.contains('topic_tags', [tag]);
+    }
+
+    final rows = await q
+        .order('frequency_rank', ascending: true)
+        .range(offset, offset + limit - 1);
+
+    return (rows as List)
         .map((e) => VocabularyModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }

@@ -27,17 +27,60 @@ class DashboardStats {
       currentLevel: json['current_level'] as String? ?? 'A1',
     );
   }
+
+  static const empty = DashboardStats(
+    streakDays: 0,
+    cardsDue: 0,
+    cardsToday: 0,
+    xpToday: 0,
+    currentLevel: 'A1',
+  );
 }
 
 @riverpod
 Future<DashboardStats> dashboardStats(DashboardStatsRef ref) async {
   final supabase = Supabase.instance.client;
-  final res = await supabase.functions.invoke(
-    'user/stats',
-    method: HttpMethod.get,
+  final userId = supabase.auth.currentUser?.id;
+  if (userId == null) return DashboardStats.empty;
+
+  final today = DateTime.now().toIso8601String().split('T')[0];
+
+  // Query profile for streak and level
+  final profileRes = await supabase
+      .from('profiles')
+      .select('streak_days, current_level')
+      .eq('id', userId)
+      .maybeSingle();
+
+  final streakDays = (profileRes?['streak_days'] as num?)?.toInt() ?? 0;
+  final currentLevel = profileRes?['current_level'] as String? ?? 'A1';
+
+  // Count cards due today or overdue
+  final dueRes = await supabase
+      .from('user_vocabulary_progress')
+      .select()
+      .eq('user_id', userId)
+      .lte('due_date', today)
+      .count(CountOption.exact);
+
+  final cardsDue = dueRes.count;
+
+  // Count reviews done today
+  final todayStart = '${today}T00:00:00.000Z';
+  final reviewsRes = await supabase
+      .from('review_events')
+      .select()
+      .eq('user_id', userId)
+      .gte('created_at', todayStart)
+      .count(CountOption.exact);
+
+  final cardsToday = reviewsRes.count;
+
+  return DashboardStats(
+    streakDays: streakDays,
+    cardsDue: cardsDue,
+    cardsToday: cardsToday,
+    xpToday: 0,
+    currentLevel: currentLevel,
   );
-  if (res.data is Map && (res.data as Map).containsKey('error')) {
-    throw Exception((res.data as Map)['error']);
-  }
-  return DashboardStats.fromJson(res.data as Map<String, dynamic>);
 }
