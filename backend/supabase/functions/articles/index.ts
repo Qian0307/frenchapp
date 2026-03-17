@@ -6,6 +6,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getUserId } from "../_shared/auth.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -16,48 +17,48 @@ serve(async (req: Request) => {
   const method = req.method;
   const path   = url.pathname.replace(/^\/articles\/?/, "");
 
+  const userId = getUserId(req);
+  if (!userId) return jsonError("Unauthorized", 401);
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+    { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
   );
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return jsonError("Unauthorized", 401);
 
   try {
     // GET /articles/daily  ─── today's article for the user's level
     if (method === "GET" && path === "daily") {
-      return await getDailyArticle(supabase, user.id);
+      return await getDailyArticle(supabase, userId);
     }
 
     // GET /articles/list  ─── paginated article browser
     if (method === "GET" && path === "list") {
-      return await listArticles(supabase, user.id, url);
+      return await listArticles(supabase, userId, url);
     }
 
     // GET /articles/:id  ─── full article with annotated body
     if (method === "GET" && /^[0-9a-f-]{36}$/.test(path)) {
-      return await getArticle(supabase, user.id, path);
+      return await getArticle(supabase, userId, path);
     }
 
     // POST /articles/:id/start  ─── mark reading started
     if (method === "POST" && path.endsWith("/start")) {
       const articleId = path.replace("/start", "");
-      return await startRead(supabase, user.id, articleId);
+      return await startRead(supabase, userId, articleId);
     }
 
     // PATCH /articles/:id/progress  ─── update reading progress
     if (method === "PATCH" && path.endsWith("/progress")) {
       const articleId = path.replace("/progress", "");
       const body = await req.json();
-      return await updateProgress(supabase, user.id, articleId, body);
+      return await updateProgress(supabase, userId, articleId, body);
     }
 
     // POST /articles/:id/vocabulary/:vocabId/lookup  ─── tap on word
     if (method === "POST" && path.includes("/vocabulary/")) {
       const [articleId, , vocabId] = path.split("/");
-      return await lookupVocab(supabase, user.id, articleId, vocabId);
+      return await lookupVocab(supabase, userId, articleId, vocabId);
     }
 
     return jsonError("Not found", 404);

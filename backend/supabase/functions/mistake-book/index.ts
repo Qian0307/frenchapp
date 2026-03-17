@@ -6,6 +6,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getUserId } from "../_shared/auth.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -16,42 +17,42 @@ serve(async (req: Request) => {
   const method = req.method;
   const path   = url.pathname.replace(/^\/mistake-book\/?/, "");
 
+  const userId = getUserId(req);
+  if (!userId) return jsonError("Unauthorized", 401);
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+    { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
   );
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return jsonError("Unauthorized", 401);
 
   try {
     // GET /mistake-book  ─── list all mistakes (unresolved by default)
     if (method === "GET" && path === "") {
-      return await listMistakes(supabase, user.id, url);
+      return await listMistakes(supabase, userId, url);
     }
 
     // PATCH /mistake-book/:vocabId/note  ─── add/update personal note
     if (method === "PATCH" && path.endsWith("/note")) {
       const vocabId = path.replace("/note", "");
       const body = await req.json();
-      return await updateNote(supabase, user.id, vocabId, body.note);
+      return await updateNote(supabase, userId, vocabId, body.note);
     }
 
     // PATCH /mistake-book/:vocabId/resolve  ─── mark resolved
     if (method === "PATCH" && path.endsWith("/resolve")) {
       const vocabId = path.replace("/resolve", "");
-      return await resolveMistake(supabase, user.id, vocabId);
+      return await resolveMistake(supabase, userId, vocabId);
     }
 
     // GET /mistake-book/review-cards  ─── get a review batch of mistake-book cards
     if (method === "GET" && path === "review-cards") {
-      return await getReviewCards(supabase, user.id, url);
+      return await getReviewCards(supabase, userId, url);
     }
 
     // DELETE /mistake-book/:vocabId  ─── remove from mistake book
     if (method === "DELETE" && /^[0-9a-f-]{36}$/.test(path)) {
-      return await removeMistake(supabase, user.id, path);
+      return await removeMistake(supabase, userId, path);
     }
 
     return jsonError("Not found", 404);

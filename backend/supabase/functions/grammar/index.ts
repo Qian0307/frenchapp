@@ -6,6 +6,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getUserId } from "../_shared/auth.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -16,39 +17,39 @@ serve(async (req: Request) => {
   const method = req.method;
   const path   = url.pathname.replace(/^\/grammar\/?/, "");
 
+  const userId = getUserId(req);
+  if (!userId) return jsonError("Unauthorized", 401);
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+    { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
   );
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return jsonError("Unauthorized", 401);
 
   try {
     // GET /grammar/lessons  ─── list lessons with progress
     if (method === "GET" && path === "lessons") {
-      return await listLessons(supabase, user.id, url);
+      return await listLessons(supabase, userId, url);
     }
 
     // GET /grammar/lessons/:id  ─── lesson detail + exercises
     if (method === "GET" && path.startsWith("lessons/")) {
       const lessonId = path.replace("lessons/", "");
-      return await getLesson(supabase, user.id, lessonId);
+      return await getLesson(supabase, userId, lessonId);
     }
 
     // POST /grammar/exercises/:id/attempt  ─── submit answer
     if (method === "POST" && path.startsWith("exercises/") && path.endsWith("/attempt")) {
       const exerciseId = path.replace("exercises/", "").replace("/attempt", "");
       const body = await req.json();
-      return await submitAttempt(supabase, user.id, exerciseId, body);
+      return await submitAttempt(supabase, userId, exerciseId, body);
     }
 
     // POST /grammar/lessons/:id/complete  ─── mark lesson complete
     if (method === "POST" && path.startsWith("lessons/") && path.endsWith("/complete")) {
       const lessonId = path.replace("lessons/", "").replace("/complete", "");
       const body = await req.json();
-      return await completeLesson(supabase, user.id, lessonId, body);
+      return await completeLesson(supabase, userId, lessonId, body);
     }
 
     return jsonError("Not found", 404);

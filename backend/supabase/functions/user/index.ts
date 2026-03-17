@@ -6,6 +6,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { getUserId } from "../_shared/auth.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -15,23 +16,19 @@ serve(async (req: Request) => {
   const url  = new URL(req.url);
   const path = url.pathname.replace(/^\/user\/?/, "");
 
+  const userId = getUserId(req);
+  if (!userId) return jsonError("Unauthorized", 401);
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+    { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
   );
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return jsonError("Unauthorized", 401);
-  }
-
   try {
-    // GET /user/stats ── dashboard statistics
     if (req.method === "GET" && path === "stats") {
-      return await getStats(supabase, user.id);
+      return await getStats(supabase, userId);
     }
-
     return jsonError("Not found", 404);
   } catch (err) {
     console.error(err);
@@ -42,30 +39,24 @@ serve(async (req: Request) => {
 async function getStats(supabase: any, userId: string) {
   const today = new Date().toISOString().split("T")[0];
 
-  // Get profile (streak, xp, level)
-  const { data: profile, error: profileErr } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("streak_days, total_xp, current_level, daily_goal_cards")
     .eq("id", userId)
     .single();
 
-  if (profileErr) return jsonError(profileErr.message, 500);
-
-  // Count cards due today
   const { count: cardsDue } = await supabase
     .from("user_vocabulary_progress")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .lte("due_date", today);
 
-  // Count cards reviewed today
   const { count: cardsToday } = await supabase
     .from("review_events")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .gte("created_at", `${today}T00:00:00.000Z`);
 
-  // XP earned today (from review sessions ended today)
   const { data: todaySessions } = await supabase
     .from("review_sessions")
     .select("cards_correct, cards_reviewed")
