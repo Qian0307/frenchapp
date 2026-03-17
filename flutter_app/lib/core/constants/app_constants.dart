@@ -3,9 +3,9 @@ class AppConstants {
 
   // ── Supabase ─────────────────────────────────────────────
   static const supabaseUrl     = String.fromEnvironment('SUPABASE_URL',
-      defaultValue: 'https://YOUR_PROJECT.supabase.co');
+      defaultValue: 'https://xvjmhsuvrakjporptoyw.supabase.co');
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY',
-      defaultValue: 'YOUR_ANON_KEY');
+      defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2am1oc3V2cmFranBvcnB0b3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMDc1MTksImV4cCI6MjA4ODY4MzUxOX0.ntzvRSiGuZB2gyYACrJw5SLaZUTt_QqV1-btq3Be3Qc');
 
   /// Call this early in main() before Supabase.initialize().
   /// Throws [StateError] if credentials are still placeholders.

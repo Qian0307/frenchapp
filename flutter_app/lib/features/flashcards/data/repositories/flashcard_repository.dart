@@ -19,10 +19,9 @@ class FlashcardRepository {
 
   Future<String> startSession() async {
     final res = await _supabase.functions.invoke(
-      'flashcards',
+      'flashcards/start',
       body:   {},
       method: HttpMethod.post,
-      // actual path controlled by edge function routing
     );
     _checkError(res);
     return (res.data as Map)['session']['id'] as String;
